@@ -78,4 +78,10 @@ public class Propiedad {
 
     public Double getLongitud() { return longitud; }
     public void setLongitud(Double longitud) { this.longitud = longitud; }
+
+    @org.springframework.data.annotation.CreatedDate
+private java.time.LocalDateTime fechaCreacion;
+
+public java.time.LocalDateTime getFechaCreacion() { return fechaCreacion; }
+public void setFechaCreacion(java.time.LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
 }

@@ -43,4 +43,10 @@ public class Contacto {
 
     public boolean isAtendido() { return atendido; }
     public void setAtendido(boolean atendido) { this.atendido = atendido; }
+
+    @org.springframework.data.annotation.CreatedDate
+private java.time.LocalDateTime fechaCreacion;
+
+public java.time.LocalDateTime getFechaCreacion() { return fechaCreacion; }
+public void setFechaCreacion(java.time.LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
 }
