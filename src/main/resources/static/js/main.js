@@ -1,8 +1,11 @@
 document.addEventListener('DOMContentLoaded', function () {
 
   // ─── CARGAR PROPIEDADES EN SELECT (formulario de contacto) ────────────────
-  const selectPropiedad = document.getElementById('propiedad');
+    const selectPropiedad = document.getElementById('propiedad');
   if (selectPropiedad) {
+    const paramsUrl = new URLSearchParams(window.location.search);
+    const propiedadIdUrl = paramsUrl.get('propiedadId');
+
     fetch('http://localhost:8080/api/propiedades/visibles')
       .then(r => r.json())
       .then(data => {
@@ -12,6 +15,11 @@ document.addEventListener('DOMContentLoaded', function () {
           opt.textContent = p.titulo;
           selectPropiedad.appendChild(opt);
         });
+
+        // Preseleccionar la propiedad si viene en la URL (?propiedadId=...)
+        if (propiedadIdUrl) {
+          selectPropiedad.value = propiedadIdUrl;
+        }
       })
       .catch(err => console.error('Error al cargar propiedades para select:', err));
   }

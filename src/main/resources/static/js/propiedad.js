@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
 
                 <div style="margin-top:24px;display:flex;flex-direction:column;gap:12px;">
-                  <a href="/contacto.html" class="btn btn-fill" style="width:100%;justify-content:center;">
+                  <a href="/contacto.html?propiedadId=${p.id}" class="btn btn-fill" style="width:100%;justify-content:center;">
                     <span class="material-symbols-rounded">mail</span>
                     Contactar asesor
                   </a>

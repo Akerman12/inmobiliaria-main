@@ -36,11 +36,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // Página de catálogo: activar filtros
+        // Página de catálogo: activar filtros
     _todasPropiedades = propiedades;
     _listaFiltrada    = [...propiedades];
     _vincularFiltros();
-    _mostrarPagina(1);
+
+    // Nuevo: precargar búsqueda desde la home
+    const paramsUrl = new URLSearchParams(window.location.search);
+    const busquedaInicial = paramsUrl.get('busqueda');
+    if (busquedaInicial) {
+      document.getElementById('fBusqueda').value = busquedaInicial;
+      _aplicarFiltros();
+    } else {
+      _mostrarPagina(1);
+    }
 
   } catch (err) {
     console.error('Error cargando anuncios:', err);
