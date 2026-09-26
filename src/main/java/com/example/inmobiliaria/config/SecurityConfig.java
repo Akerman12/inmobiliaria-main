@@ -7,6 +7,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -55,6 +56,13 @@ public class SecurityConfig {
                     "/api/prediccion/**",
                     "/api/v2/chat/**"
                  ).permitAll()
+
+                    .requestMatchers(HttpMethod.GET, "/api/propiedades/**", "/api/imagenes/**").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/propiedades/**").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.PUT, "/api/propiedades/**").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.PATCH, "/api/propiedades/**").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.DELETE, "/api/propiedades/**").hasRole("ADMIN")
+                     .requestMatchers(HttpMethod.POST, "/api/imagenes/subir").hasRole("ADMIN")
 
             
                     

@@ -51,6 +51,12 @@ Para ejecutar las pruebas:
 - Alta y edición de propiedades con operación, tipo, precio, características, ubicación e imágenes.
 - Gestión de visibilidad y administración de contactos.
 
+### Imágenes
+
+Las imágenes nuevas se guardan en GridFS dentro de la misma base MongoDB, en las colecciones `imagenesPropiedades.files` e `imagenesPropiedades.chunks`, no en el disco del servidor. GridFS crea un documento en `.files` por archivo y uno o más bloques en `.chunks`; por eso varias imágenes producen varios documentos. Cada archivo incluye en `metadata` el ID y título de la propiedad, su número de imagen y el nombre original; el filename también identifica la propiedad. Las imágenes JPG y PNG se redimensionan a un máximo de 1600 px y se comprimen como JPEG; WEBP se conserva en su formato. Las URLs usan `/api/imagenes/{id}` y se sirven con caché HTTP. El bucket anterior `fs` sigue disponible para leer y eliminar imágenes ya guardadas allí; las rutas antiguas `/uploads/...` siguen disponibles mientras sus archivos locales existan.
+
+Las fotos que ya faltaban del disco no se pueden reconstruir desde sus rutas guardadas en MongoDB. Hay que recuperarlas desde una copia anterior y volver a publicarlas.
+
 ### Compatibilidad con propiedades existentes
 
 Las propiedades guardadas antes de incorporar estos campos no contienen `operacion` ni `tipo`. Para no perderlas ni requerir una migración, la aplicación las presenta como `venta` y `otro`, respectivamente. Se pueden clasificar editándolas desde el panel administrativo. Las propiedades nuevas requieren seleccionar ambos campos.

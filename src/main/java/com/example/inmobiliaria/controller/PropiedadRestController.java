@@ -5,12 +5,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+import org.bson.types.ObjectId;
 
+import com.example.inmobiliaria.Service.ImageStorageService;
 import com.example.inmobiliaria.model.Propiedad;
 import com.example.inmobiliaria.repository.PropiedadRepository;
 
@@ -22,7 +27,8 @@ public class PropiedadRestController {
     @Autowired
     private PropiedadRepository repo;
 
-    private final String UPLOAD_DIR = System.getProperty("user.dir") + "/uploads/";
+    @Autowired
+    private ImageStorageService imageStorageService;
 
     @GetMapping
     public List<Propiedad> listar() {
@@ -43,15 +49,15 @@ public class PropiedadRestController {
 
         List<String> rutas = new ArrayList<>();
         MultipartFile[] archivos = normalizarImagenes(imagenes, imagen);
+        propiedad.setId(new ObjectId().toHexString());
 
         if (archivos != null) {
-            asegurarCarpetaUploads();
+            validarCantidadImagenes(archivos);
+            int numeroImagen = 1;
             for (MultipartFile imagen1 : archivos) {
                 if (!imagen1.isEmpty()) {
-                    String nombreArchivo = System.currentTimeMillis() + "_" + imagen1.getOriginalFilename();
-                    Path rutaArchivo = Paths.get(UPLOAD_DIR + nombreArchivo);
-                    Files.write(rutaArchivo, imagen1.getBytes());
-                    rutas.add("/uploads/" + nombreArchivo);
+                    rutas.add("/api/imagenes/" + imageStorageService.store(
+                            imagen1, propiedad.getId(), propiedad.getTitulo(), numeroImagen++));
                 }
             }
         }
@@ -89,21 +95,27 @@ public class PropiedadRestController {
         existente.setLongitud(nueva.getLongitud());
 
         MultipartFile[] archivos = normalizarImagenes(imagenes, imagen);
-        if (archivos != null && archivos.length > 0) {
-            asegurarCarpetaUploads();
+        boolean reemplazarImagenes = archivos != null
+                && Arrays.stream(archivos).anyMatch(archivo -> archivo != null && !archivo.isEmpty());
+        List<String> imagenesAnteriores = existente.getImagenes();
+        if (reemplazarImagenes) {
+            validarCantidadImagenes(archivos);
             List<String> rutas = new ArrayList<>();
+            int numeroImagen = 1;
             for (MultipartFile imagen1 : archivos) {
-                if (!imagen1.isEmpty()) {
-                    String nombreArchivo = System.currentTimeMillis() + "_" + imagen1.getOriginalFilename();
-                    Path rutaArchivo = Paths.get(UPLOAD_DIR + nombreArchivo);
-                    Files.write(rutaArchivo, imagen1.getBytes());
-                    rutas.add("/uploads/" + nombreArchivo);
+                if (imagen1 != null && !imagen1.isEmpty()) {
+                    rutas.add("/api/imagenes/" + imageStorageService.store(
+                            imagen1, existente.getId(), existente.getTitulo(), numeroImagen++));
                 }
             }
             existente.setImagenes(rutas);
         }
 
-        return repo.save(existente);
+        Propiedad guardada = repo.save(existente);
+        if (reemplazarImagenes) {
+            eliminarImagenes(imagenesAnteriores);
+        }
+        return guardada;
     }
 
     private MultipartFile[] normalizarImagenes(MultipartFile[] imagenes, MultipartFile imagen) {
@@ -112,24 +124,34 @@ public class PropiedadRestController {
         return null;
     }
 
-    private void asegurarCarpetaUploads() throws IOException {
-        Files.createDirectories(Paths.get(UPLOAD_DIR));
+    private void validarCantidadImagenes(MultipartFile[] archivos) {
+        if (archivos.length > 4) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se permiten hasta 4 imágenes por propiedad.");
+        }
+    }
+
+    private void eliminarImagenes(List<String> imagenes) {
+        if (imagenes == null) return;
+        for (String imagen : imagenes) {
+            imageStorageService.deleteByReference(imagen);
+            if (imagen != null && imagen.startsWith("/uploads/")) {
+                Path uploads = Paths.get(System.getProperty("user.dir"), "uploads").toAbsolutePath().normalize();
+                Path archivo = uploads.resolve(imagen.substring("/uploads/".length())).normalize();
+                if (archivo.startsWith(uploads)) {
+                    try {
+                        Files.deleteIfExists(archivo);
+                    } catch (IOException ignored) {
+                    }
+                }
+            }
+        }
     }
 
     @DeleteMapping("/{id}")
     public void eliminar(@PathVariable String id) {
         Propiedad p = repo.findById(id).orElse(null);
         if (p != null) {
-            if (p.getImagenes() != null) {
-                for (String ruta : p.getImagenes()) {
-                    try {
-                        Path archivo = Paths.get(System.getProperty("user.dir") + ruta);
-                        Files.deleteIfExists(archivo);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
+            eliminarImagenes(p.getImagenes());
             repo.deleteById(id);
         }
     }
