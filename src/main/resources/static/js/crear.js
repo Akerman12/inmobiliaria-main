@@ -111,6 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const propiedad = {
       titulo:          form.titulo.value.trim(),
       descripcion:     form.descripcion.value.trim(),
+      operacion:       form.operacion.value,
+      tipo:            form.tipo.value,
       precio:          parseInt(form.precio.value),
       habitaciones:    parseInt(form.habitaciones.value),
       wc:              parseInt(form.wc.value),

@@ -111,6 +111,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!res.ok) throw new Error('No encontrado');
     const p = await res.json();
 
+    document.getElementById('operacion').value = p.operacion || 'venta';
+    document.getElementById('tipo').value = p.tipo || 'otro';
+
     document.getElementById('idPropiedad').value    = p.id;
     document.getElementById('titulo').value          = p.titulo;
     document.getElementById('descripcion').value     = p.descripcion;
@@ -175,6 +178,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const propiedad = {
       titulo:          document.getElementById('titulo').value,
       descripcion:     document.getElementById('descripcion').value,
+      operacion:       document.getElementById('operacion').value,
+      tipo:            document.getElementById('tipo').value,
       precio:          parseFloat(document.getElementById('precio').value),
       wc:              parseInt(document.getElementById('wc').value),
       estacionamiento: parseInt(document.getElementById('estacionamiento').value),

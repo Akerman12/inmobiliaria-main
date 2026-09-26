@@ -73,6 +73,8 @@ public class PropiedadRestController {
 
         existente.setTitulo(nueva.getTitulo());
         existente.setDescripcion(nueva.getDescripcion());
+        existente.setOperacion(nueva.getOperacion());
+        existente.setTipo(nueva.getTipo());
         existente.setPrecio(nueva.getPrecio());
         existente.setWc(nueva.getWc());
         existente.setEstacionamiento(nueva.getEstacionamiento());

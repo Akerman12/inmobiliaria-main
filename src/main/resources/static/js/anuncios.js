@@ -41,15 +41,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     _listaFiltrada    = [...propiedades];
     _vincularFiltros();
 
-    // Nuevo: precargar búsqueda desde la home
     const paramsUrl = new URLSearchParams(window.location.search);
     const busquedaInicial = paramsUrl.get('busqueda');
+    const operacionInicial = paramsUrl.get('operacion');
+    const tipoInicial = paramsUrl.get('tipo');
+    if (operacionInicial) document.getElementById('fOperacion').value = operacionInicial;
+    if (tipoInicial) document.getElementById('fTipo').value = tipoInicial;
     if (busquedaInicial) {
       document.getElementById('fBusqueda').value = busquedaInicial;
-      _aplicarFiltros();
-    } else {
-      _mostrarPagina(1);
     }
+    if (busquedaInicial || operacionInicial || tipoInicial) _aplicarFiltros();
+    else _mostrarPagina(1);
 
   } catch (err) {
     console.error('Error cargando anuncios:', err);
@@ -75,7 +77,7 @@ function _vincularFiltros() {
     if (e.key === 'Enter') _aplicarFiltros();
   });
 
-  ['fCiudad', 'fHabitaciones', 'fBanos', 'fPrecio'].forEach(id => {
+  ['fOperacion', 'fTipo', 'fCiudad', 'fHabitaciones', 'fBanos', 'fPrecio'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', _aplicarFiltros);
   });
 }
@@ -83,12 +85,16 @@ function _vincularFiltros() {
 // ─── Aplicar filtros ──────────────────────────────────────────────────────────
 function _aplicarFiltros() {
   const busqueda     = document.getElementById('fBusqueda')?.value.trim().toLowerCase() || '';
+  const operacion    = document.getElementById('fOperacion')?.value || '';
+  const tipo         = document.getElementById('fTipo')?.value || '';
   const ciudad       = document.getElementById('fCiudad')?.value       || '';
   const habitaciones = parseInt(document.getElementById('fHabitaciones')?.value) || 0;
   const banos        = parseInt(document.getElementById('fBanos')?.value)         || 0;
   const precioMax    = parseInt(document.getElementById('fPrecio')?.value)        || 0;
 
   _listaFiltrada = _todasPropiedades.filter(p => {
+    if (operacion && (p.operacion || 'venta') !== operacion) return false;
+    if (tipo && (p.tipo || 'otro') !== tipo) return false;
     if (busqueda && !(
       p.titulo?.toLowerCase().includes(busqueda) ||
       p.descripcion?.toLowerCase().includes(busqueda) ||
@@ -101,13 +107,13 @@ function _aplicarFiltros() {
     return true;
   });
 
-  _renderizarChips({ busqueda, ciudad, habitaciones, banos, precioMax });
+  _renderizarChips({ busqueda, operacion, tipo, ciudad, habitaciones, banos, precioMax });
   _mostrarPagina(1);
 }
 
 // ─── Limpiar filtros ──────────────────────────────────────────────────────────
 function _limpiarFiltros() {
-  ['fBusqueda', 'fCiudad', 'fHabitaciones', 'fBanos', 'fPrecio'].forEach(id => {
+  ['fBusqueda', 'fOperacion', 'fTipo', 'fCiudad', 'fHabitaciones', 'fBanos', 'fPrecio'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -117,7 +123,7 @@ function _limpiarFiltros() {
 }
 
 // ─── Chips activos ────────────────────────────────────────────────────────────
-function _renderizarChips({ busqueda, ciudad, habitaciones, banos, precioMax } = {}) {
+function _renderizarChips({ busqueda, operacion, tipo, ciudad, habitaciones, banos, precioMax } = {}) {
   const wrapper = document.getElementById('chipsActivos');
   if (!wrapper) return;
   wrapper.innerHTML = '';
@@ -132,6 +138,14 @@ function _renderizarChips({ busqueda, ciudad, habitaciones, banos, precioMax } =
 
   if (busqueda) agregar(`"${busqueda}"`, () => {
     document.getElementById('fBusqueda').value = '';
+    _aplicarFiltros();
+  });
+  if (operacion) agregar(operacion === 'arriendo' ? 'Arriendo' : 'Venta', () => {
+    document.getElementById('fOperacion').value = '';
+    _aplicarFiltros();
+  });
+  if (tipo) agregar(tipo.charAt(0).toUpperCase() + tipo.slice(1), () => {
+    document.getElementById('fTipo').value = '';
     _aplicarFiltros();
   });
   if (ciudad) agregar(ciudad, () => {
@@ -225,7 +239,7 @@ function renderizarPropiedades(lista, contenedor) {
           <div class="img-holder" style="--width:4;--height:3;">
             <img loading="lazy" src="${imagenUrl}" alt="${p.titulo}" class="img-cover" onerror="this.src='/img/default.jpg'">
           </div>
-          <span class="tag card-tag">En Venta</span>
+          <span class="tag card-tag">${(p.operacion || 'venta') === 'arriendo' ? 'En Arriendo' : 'En Venta'}</span>
         </div>
         <div class="card-body">
           <h3 class="card-title title-small">

@@ -39,10 +39,12 @@
 
     .filtros-grid {
       display: grid;
-      grid-template-columns: 2fr repeat(4, 1fr) auto;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 12px;
       align-items: end;
     }
+
+    .filtro-grupo-busqueda { grid-column: span 2; }
 
     .filtro-group {
       display: flex;
@@ -180,7 +182,7 @@
     /* Responsive filtros */
     @media (max-width: 1024px) {
       .filtros-grid {
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
       .filtros-grid .filtro-btns { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; }
     }
@@ -253,6 +255,32 @@
                 id="fBusqueda"
                 class="filtro-control"
                 placeholder="Título o descripción...">
+            </div>
+
+            <div class="filtro-group">
+              <label class="filtro-label" for="fOperacion">Operación</label>
+              <div class="filtro-select-wrapper">
+                <select id="fOperacion" class="filtro-control">
+                  <option value="">Todas</option>
+                  <option value="venta">Venta</option>
+                  <option value="arriendo">Arriendo</option>
+                </select>
+                <span class="material-symbols-rounded">real_estate_agent</span>
+              </div>
+            </div>
+
+            <div class="filtro-group">
+              <label class="filtro-label" for="fTipo">Tipo</label>
+              <div class="filtro-select-wrapper">
+                <select id="fTipo" class="filtro-control">
+                  <option value="">Todos</option>
+                  <option value="casa">Casa</option>
+                  <option value="apartamento">Apartamento</option>
+                  <option value="villa">Villa</option>
+                  <option value="otro">Otro</option>
+                </select>
+                <span class="material-symbols-rounded">apartment</span>
+              </div>
             </div>
 
             <!-- Ciudad -->

@@ -67,7 +67,8 @@
             <span class="label-medium label">Operación</span>
             <select class="search-item-field body-medium" id="searchTipo">
               <option value="">Cualquiera</option>
-              <option value="compra">Comprar</option>
+              <option value="venta">Venta</option>
+              <option value="arriendo">Arriendo</option>
             </select>
             <span class="material-symbols-rounded">real_estate_agent</span>
           </label>
@@ -344,8 +345,12 @@
     function buscarPropiedades(e) {
   e.preventDefault();
   const ubicacion = document.getElementById('searchUbicacion').value.trim();
+  const operacion = document.getElementById('searchTipo').value;
+  const tipo = document.getElementById('searchCategoria').value;
   const params = new URLSearchParams();
   if (ubicacion) params.set('busqueda', ubicacion);
+  if (operacion) params.set('operacion', operacion);
+  if (tipo) params.set('tipo', tipo);
   window.location.href = '/anuncio.html' + (params.toString() ? '?' + params.toString() : '');
 }
   </script>

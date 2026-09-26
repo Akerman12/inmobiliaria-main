@@ -13,6 +13,8 @@ public class Propiedad {
 
     private String titulo;
     private String descripcion;
+    private String operacion = "venta";
+    private String tipo = "otro";
     private double precio;
     private int habitaciones;
     private int wc;
@@ -42,6 +44,12 @@ public class Propiedad {
 
     public String getDescripcion() { return descripcion; }
     public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+
+    public String getOperacion() { return operacion == null ? "venta" : operacion; }
+    public void setOperacion(String operacion) { this.operacion = operacion; }
+
+    public String getTipo() { return tipo == null ? "otro" : tipo; }
+    public void setTipo(String tipo) { this.tipo = tipo; }
 
     public double getPrecio() { return precio; }
     public void setPrecio(double precio) { this.precio = precio; }

@@ -164,6 +164,24 @@
                   </div>
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
                     <div class="form-group">
+                      <label class="form-label" for="operacion">Operación *</label>
+                      <select id="operacion" name="operacion" class="form-control" required>
+                        <option value="venta">Venta</option>
+                        <option value="arriendo">Arriendo</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="tipo">Tipo de inmueble *</label>
+                      <select id="tipo" name="tipo" class="form-control" required>
+                        <option value="casa">Casa</option>
+                        <option value="apartamento">Apartamento</option>
+                        <option value="villa">Villa</option>
+                        <option value="otro">Otro</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                    <div class="form-group">
                       <label class="form-label" for="precio">Precio (COP) *</label>
                       <input type="number" id="precio" name="precio" class="form-control" placeholder="350000000"
                         min="0" required>

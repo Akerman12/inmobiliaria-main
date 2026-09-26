@@ -52,7 +52,8 @@ public class SecurityConfig {
                      "/img/**",
                      "/admin/login",
                     "/admin/login.html",
-                    "/api/prediccion/**"
+                    "/api/prediccion/**",
+                    "/api/v2/chat/**"
                  ).permitAll()
 
             
