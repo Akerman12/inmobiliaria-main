@@ -225,56 +225,15 @@
       </div>
     </section>
 
-    <!-- TESTIMONIALS -->
+   <!-- TESTIMONIALS -->
     <section class="section">
       <div class="container">
         <div class="section-header" data-aos="fade-up">
           <span class="section-eyebrow">Testimoniales</span>
           <h2 class="section-title">Lo que dicen nuestros clientes</h2>
         </div>
-        <div class="testimonials-grid">
-          <div class="testimonial-card" data-aos="fade-up">
-            <div class="stars">★★★★★</div>
-            <blockquote>"El personal se comportó de una excelente forma, muy buena atención y la casa que me ofrecieron
-              cumple con todas mis expectativas."</blockquote>
-            <div class="author">
-              <div
-                style="width:44px;height:44px;background:var(--gradient);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--white);font-weight:700;font-size:1.8rem;flex-shrink:0;">
-                J</div>
-              <div>
-                <div class="author-name">Juan De la Torre</div>
-                <div class="author-role">Cliente satisfecho</div>
-              </div>
-            </div>
-          </div>
-          <div class="testimonial-card" data-aos="fade-up" data-aos-delay="100">
-            <div class="stars">★★★★★</div>
-            <blockquote>"Encontré mi departamento ideal en tiempo récord. El equipo me guió en todo el proceso de compra
-              sin complicaciones."</blockquote>
-            <div class="author">
-              <div
-                style="width:44px;height:44px;background:linear-gradient(135deg,#0F4392,#21FFFF22);background:var(--gradient);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--white);font-weight:700;font-size:1.8rem;flex-shrink:0;">
-                M</div>
-              <div>
-                <div class="author-name">María Fernández</div>
-                <div class="author-role">Compradora</div>
-              </div>
-            </div>
-          </div>
-          <div class="testimonial-card" data-aos="fade-up" data-aos-delay="200">
-            <div class="stars">★★★★★</div>
-            <blockquote>"Vendí mi casa al mejor precio del mercado gracias al equipo de Bienes Raíces. Altamente
-              recomendado."</blockquote>
-            <div class="author">
-              <div
-                style="width:44px;height:44px;background:var(--gradient);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--white);font-weight:700;font-size:1.8rem;flex-shrink:0;">
-                C</div>
-              <div>
-                <div class="author-name">Carlos Morales</div>
-                <div class="author-role">Vendedor</div>
-              </div>
-            </div>
-          </div>
+        <div id="lista-testimonios" class="testimonials-grid">
+          <div class="spinner">Cargando testimonios...</div>
         </div>
       </div>
     </section>
@@ -328,6 +287,7 @@
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
   <script src="/js/main.js"></script>
   <script src="/js/anuncios.js"></script>
+  <script src="/js/testimonios.js"></script>
   <script>
     AOS.init({ duration: 700, once: true, offset: 60 });
 
@@ -345,12 +305,8 @@
     function buscarPropiedades(e) {
   e.preventDefault();
   const ubicacion = document.getElementById('searchUbicacion').value.trim();
-  const operacion = document.getElementById('searchTipo').value;
-  const tipo = document.getElementById('searchCategoria').value;
   const params = new URLSearchParams();
   if (ubicacion) params.set('busqueda', ubicacion);
-  if (operacion) params.set('operacion', operacion);
-  if (tipo) params.set('tipo', tipo);
   window.location.href = '/anuncio.html' + (params.toString() ? '?' + params.toString() : '');
 }
   </script>

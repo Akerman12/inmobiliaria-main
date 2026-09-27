@@ -42,15 +42,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     _vincularFiltros();
 
     const paramsUrl = new URLSearchParams(window.location.search);
-    const busquedaInicial = paramsUrl.get('busqueda');
+    const busquedaInicial  = paramsUrl.get('busqueda');
+    const ciudadInicial    = paramsUrl.get('ciudad');
     const operacionInicial = paramsUrl.get('operacion');
-    const tipoInicial = paramsUrl.get('tipo');
-    if (operacionInicial) document.getElementById('fOperacion').value = operacionInicial;
-    if (tipoInicial) document.getElementById('fTipo').value = tipoInicial;
+    const tipoInicial      = paramsUrl.get('tipo');
+
+    if (ciudadInicial) {
+      const selectCiudad = document.getElementById('fCiudad');
+      const opcion = Array.from(selectCiudad.options)
+        .find(o => o.value.toLowerCase() === ciudadInicial.toLowerCase());
+      if (opcion) selectCiudad.value = opcion.value;
+    }
+
     if (busquedaInicial) {
       document.getElementById('fBusqueda').value = busquedaInicial;
     }
-    if (busquedaInicial || operacionInicial || tipoInicial) _aplicarFiltros();
+
+    if (operacionInicial) {
+      const selectOperacion = document.getElementById('fOperacion');
+      const opcion = Array.from(selectOperacion.options)
+        .find(o => o.value.toLowerCase() === operacionInicial.toLowerCase());
+      if (opcion) selectOperacion.value = opcion.value;
+    }
+
+    if (tipoInicial) {
+      const selectTipo = document.getElementById('fTipo');
+      const opcion = Array.from(selectTipo.options)
+        .find(o => o.value.toLowerCase() === tipoInicial.toLowerCase());
+      if (opcion) selectTipo.value = opcion.value;
+    }
+
+    if (busquedaInicial || ciudadInicial || operacionInicial || tipoInicial) _aplicarFiltros();
     else _mostrarPagina(1);
 
   } catch (err) {
@@ -73,8 +95,11 @@ function _vincularFiltros() {
   btnFiltrar.addEventListener('click', _aplicarFiltros);
   btnLimpiar.addEventListener('click', _limpiarFiltros);
 
-  document.getElementById('fBusqueda')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') _aplicarFiltros();
+  // Búsqueda en vivo: se aplica sola mientras el usuario escribe
+  let debounceTimer;
+  document.getElementById('fBusqueda')?.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(_aplicarFiltros, 350);
   });
 
   ['fOperacion', 'fTipo', 'fCiudad', 'fHabitaciones', 'fBanos', 'fPrecio'].forEach(id => {
@@ -85,27 +110,41 @@ function _vincularFiltros() {
 // ─── Aplicar filtros ──────────────────────────────────────────────────────────
 function _aplicarFiltros() {
   const busqueda     = document.getElementById('fBusqueda')?.value.trim().toLowerCase() || '';
-  const operacion    = document.getElementById('fOperacion')?.value || '';
-  const tipo         = document.getElementById('fTipo')?.value || '';
+  const operacion    = document.getElementById('fOperacion')?.value    || '';
+  const tipo         = document.getElementById('fTipo')?.value         || '';
   const ciudad       = document.getElementById('fCiudad')?.value       || '';
   const habitaciones = parseInt(document.getElementById('fHabitaciones')?.value) || 0;
   const banos        = parseInt(document.getElementById('fBanos')?.value)         || 0;
   const precioMax    = parseInt(document.getElementById('fPrecio')?.value)        || 0;
 
   _listaFiltrada = _todasPropiedades.filter(p => {
-    if (operacion && (p.operacion || 'venta') !== operacion) return false;
-    if (tipo && (p.tipo || 'otro') !== tipo) return false;
     if (busqueda && !(
       p.titulo?.toLowerCase().includes(busqueda) ||
       p.descripcion?.toLowerCase().includes(busqueda) ||
       p.barrio?.toLowerCase().includes(busqueda)
     )) return false;
+    if (operacion    && (p.operacion || 'venta') !== operacion)      return false;
+    if (tipo         && (p.tipo || '').toLowerCase() !== tipo)       return false;
     if (ciudad       && p.ciudad       !== ciudad)       return false;
     if (habitaciones && p.habitaciones  < habitaciones)  return false;
     if (banos        && p.wc            < banos)         return false;
     if (precioMax    && p.precio        > precioMax)     return false;
     return true;
   });
+
+  // Ordenar de menor a mayor desde el valor elegido (más cercanas primero)
+  if (habitaciones || banos) {
+    _listaFiltrada.sort((a, b) => {
+      if (habitaciones) {
+        const diff = a.habitaciones - b.habitaciones;
+        if (diff !== 0) return diff;
+      }
+      if (banos) {
+        return a.wc - b.wc;
+      }
+      return 0;
+    });
+  }
 
   _renderizarChips({ busqueda, operacion, tipo, ciudad, habitaciones, banos, precioMax });
   _mostrarPagina(1);
