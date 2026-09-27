@@ -613,6 +613,33 @@ El formulario se envia con `POST /api/propiedades`.
 
 `actualizar.js` usa `PUT` para editar una propiedad.
 
+### Contacto preferido en el panel administrativo
+
+`src/main/resources/static/admin/contactos.html` muestra cada mensaje y usa el
+campo `medioContacto` para elegir la acción principal:
+
+- `telefono`: crea un enlace `tel:` con el celular.
+- `correo` (tambien valor predeterminado): crea un enlace `mailto:` con asunto.
+- `whatsapp`: crea un enlace `https://wa.me/` y abre WhatsApp en otra pestana.
+
+La funcion `generarLinkContacto(c)` limpia el numero de WhatsApp y agrega el
+indicativo de Colombia `57` cuando no viene incluido. El texto del mensaje se
+codifica con `encodeURIComponent` e incluye el nombre y la propiedad consultada.
+Si falta el correo o el telefono, el enlace se deshabilita en vez de abrir un
+destino vacio. Los enlaces `tel:` y `mailto:` dependen de las aplicaciones
+asociadas en el computador del administrador.
+
+La cuadricula y el ajuste del contenido se definen en
+`src/main/resources/static/css/app.css`: `auto-fill` conserva las columnas de
+ancho minimo de 280 px, `min-width: 0` permite que el contenido se contraiga y
+`overflow-wrap: anywhere` evita que nombres, direcciones o mensajes largos
+desborden la tarjeta. Las acciones usan una cuadricula interna con espacio fijo
+para eliminar y los botones principales apilados.
+
+Los datos de contacto que se muestran en el sitio publico estan en
+`src/main/resources/static/contacto.html`: telefono `+57 321 507 3671` y correo
+`inmobiliariabelar@gmail.com`.
+
 ## 15. Como ejecutar y probar
 
 Desde PowerShell, en la raiz del proyecto:

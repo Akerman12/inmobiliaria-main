@@ -44,12 +44,16 @@ Para ejecutar las pruebas:
 - Catálogo con filtros por operación (venta o arriendo), tipo (casa, apartamento, villa u otro), ciudad, habitaciones, baños y precio máximo.
 - Detalle de propiedad, galería de imágenes y formulario de contacto.
 - Los parámetros de búsqueda del inicio se conservan al abrir el catálogo.
+- Datos públicos de contacto: teléfono `+57 321 507 3671` y correo `inmobiliariabelar@gmail.com`.
 
 ### Panel administrativo
 
 - Acceso con Spring Security y rol `ADMIN`; las contraseñas se protegen con BCrypt.
 - Alta y edición de propiedades con operación, tipo, precio, características, ubicación e imágenes.
 - Gestión de visibilidad y administración de contactos.
+- Las tarjetas de contacto ofrecen una acción según el medio preferido: llamar, responder por correo o abrir WhatsApp con un mensaje preparado.
+- Los números de WhatsApp sin indicativo reciben el prefijo colombiano `57`; si falta el dato requerido, la acción aparece deshabilitada.
+- Las tarjetas conservan un ancho mínimo y ajustan textos largos y acciones para que permanezcan dentro de sus límites.
 
 ### Imágenes
 
