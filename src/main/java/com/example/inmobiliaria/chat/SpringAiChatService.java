@@ -2,11 +2,11 @@ package com.example.inmobiliaria.chat;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Service;
 
 @Service
-@ConditionalOnProperty(prefix = "groq", name = "api-key")
+@ConditionalOnExpression("T(org.springframework.util.StringUtils).hasText('${GROQ_API_KEY:}')")
 public class SpringAiChatService {
 
     private final ChatClient chatClient;

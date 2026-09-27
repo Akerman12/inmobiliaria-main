@@ -63,13 +63,41 @@ Las propiedades guardadas antes de incorporar estos campos no contienen `operaci
 
 ## Chat de Groq
 
-La integración usa Spring AI con la API compatible con OpenAI de Groq. Configure `GROQ_API_KEY` en el entorno antes de iniciar la aplicación. El modelo predeterminado es `llama-3.3-70b-versatile` y la URL base es `https://api.groq.com/openai`.
+La integración usa Spring AI con la API compatible con OpenAI de Groq. Configure `GROQ_API_KEY` en el entorno antes de iniciar la aplicación. El modelo configurado es `openai/gpt-oss-20b` y la URL base es `https://api.groq.com/openai`.
+
+En Windows, desde PowerShell en la raíz del proyecto:
+
+```powershell
+$env:GROQ_API_KEY = "tu_clave_de_groq"
+.\mvnw.cmd spring-boot:run
+```
+
+La clave no se guarda en el repositorio. Para listar los modelos disponibles para esa clave y elegir uno distinto:
+
+```powershell
+$headers = @{ Authorization = "Bearer $env:GROQ_API_KEY" }
+(Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/models" -Headers $headers).data |
+  Select-Object -ExpandProperty id
+```
+
+Configura el ID elegido en `spring.ai.openai.chat.options.model` de `src/main/resources/application.properties` y reinicia la aplicación. Si Groq responde `model_not_found`, el modelo no existe o la cuenta no tiene acceso.
 
 Endpoints disponibles cuando la clave está configurada:
 
 - `GET /api/v2/chat/salud`: estado del servicio y modelo.
 - `POST /api/v2/chat`: recibe JSON con `pregunta` y, opcionalmente, `dominio`.
 - `POST /api/v2/chat/rapido?pregunta=...&dominio=...`: alternativa con parámetros de consulta.
+
+Para probar el chat en Thunder Client, usa `POST http://localhost:8080/api/v2/chat`, selecciona **Body → JSON** y envía:
+
+```json
+{
+  "pregunta": "¿Qué debo revisar antes de comprar una vivienda?",
+  "dominio": "bienes raíces en Colombia"
+}
+```
+
+La respuesta exitosa incluye `respuesta`, `modelo` y `dominio`. Los errores del proveedor se devuelven como JSON `502`; el mensaje diferencia entre API key rechazada, modelo no disponible y límite de solicitudes.
 
 Ejemplo para `POST /api/v2/chat`:
 
