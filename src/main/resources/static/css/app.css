@@ -1119,6 +1119,7 @@ select.form-control { cursor: pointer; }
   gap: 20px;
 }
 .contact-card {
+  min-width: 0;
   background: var(--white);
   border-radius: var(--radius-large);
   padding: 24px;
@@ -1140,12 +1141,12 @@ select.form-control { cursor: pointer; }
   font-size: 2rem;
   flex-shrink: 0;
 }
-.contact-card-name  { font-size: var(--fs-title-small); font-weight: var(--weight-semiBold); color: var(--neutral-10); }
+.contact-card-name  { font-size: var(--fs-title-small); font-weight: var(--weight-semiBold); color: var(--neutral-10); overflow-wrap: anywhere; }
 .contact-card-date  { font-size: var(--fs-label-medium); color: var(--neutral-60); }
 .contact-card-body  { display: flex; flex-direction: column; gap: 8px; }
 .contact-card-row   { display: flex; gap: 8px; align-items: flex-start; }
 .contact-card-row .material-symbols-rounded { font-size: 1.8rem; color: var(--primary-100); flex-shrink: 0; margin-top: 1px; }
-.contact-card-row span { color: var(--neutral-40); font-size: var(--fs-body-medium); }
+.contact-card-row span { color: var(--neutral-40); font-size: var(--fs-body-medium); min-width: 0; overflow-wrap: anywhere; }
 .contact-card-message {
   background: var(--neutral-98);
   border-radius: var(--radius-small);
@@ -1155,6 +1156,7 @@ select.form-control { cursor: pointer; }
   font-size: var(--fs-body-medium);
   line-height: 1.6;
   font-style: italic;
+  overflow-wrap: anywhere;
 }
 
 /*-----------------------------------*\

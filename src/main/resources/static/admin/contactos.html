@@ -447,6 +447,47 @@
     // ═══════════════════════════════════════════════════════════
     //  RENDER DE CARDS
     // ═══════════════════════════════════════════════════════════
+    function generarLinkContacto(c) {
+      const medio = c.medioContacto || 'correo';
+
+      if (medio === 'telefono') {
+        const telefono = (c.celular || '').replace(/\s+/g, '');
+        return {
+          href: telefono ? `tel:${telefono}` : '#',
+          icono: 'call',
+          texto: 'Llamar',
+          disabled: !telefono
+        };
+      }
+
+      if (medio === 'whatsapp') {
+        let numero = (c.celular || '').replace(/\D/g, '');
+        if (numero && !numero.startsWith('57')) {
+          numero = '57' + numero.replace(/^0+/, '');
+        }
+        const mensaje = encodeURIComponent(
+          `Hola ${c.nombre}, te escribo de Bienes Raíces respecto a tu mensaje sobre ${
+            mapaPropiedades[c.casaInteres] || 'la propiedad que consultaste'
+          }.`
+        );
+        return {
+          href: numero ? `https://wa.me/${numero}?text=${mensaje}` : '#',
+          icono: 'chat',
+          texto: 'WhatsApp',
+          disabled: !numero
+        };
+      }
+
+      const correo = c.correo || '';
+      const asunto = encodeURIComponent('Respuesta a tu consulta - Bienes Raíces');
+      return {
+        href: correo ? `mailto:${correo}?subject=${asunto}` : '#',
+        icono: 'mail',
+        texto: 'Responder',
+        disabled: !correo
+      };
+    }
+
     function renderizarContactos(lista) {
       const contenedor = document.getElementById('contenedor-contactos');
 
@@ -467,6 +508,7 @@
         const iniciales  = c.nombre ? c.nombre.charAt(0).toUpperCase() : '?';
         const iconoMedio = medioIconos[c.medioContacto] || 'contact_mail';
         const atendido   = c.atendido === true;
+        const linkContacto = generarLinkContacto(c);
 
         return `
           <div class="contact-card" style="border-left-color:${atendido ? 'var(--success)' : 'var(--primary-100)'};">
@@ -476,7 +518,7 @@
                    style="background:${atendido ? 'linear-gradient(135deg,#22c55e,#15803d)' : ''};">
                 ${iniciales}
               </div>
-              <div style="flex:1;">
+              <div style="flex:1;min-width:0;">
                 <div class="contact-card-name">${c.nombre}</div>
                 <div class="contact-card-date" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px;">
                   <span class="badge badge-blue" style="display:inline-flex;align-items:center;gap:4px;">
@@ -509,15 +551,26 @@
               ${c.mensaje ? `<div class="contact-card-message">"${c.mensaje}"</div>` : ''}
             </div>
 
-            <div style="display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--neutral-95);">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 38px;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--neutral-95);">
+              <a href="${linkContacto.href}"
+                target="${c.medioContacto === 'whatsapp' ? '_blank' : '_self'}"
+                rel="${c.medioContacto === 'whatsapp' ? 'noopener noreferrer' : ''}"
+                class="btn btn-sm ${linkContacto.disabled ? 'btn-outline' : 'btn-fill'}"
+                aria-disabled="${linkContacto.disabled}"
+                style="min-width:0;width:100%;justify-content:center;white-space:normal;${linkContacto.disabled ? 'opacity:.5;pointer-events:none;' : ''}"
+                title="${linkContacto.disabled ? 'No hay dato de contacto disponible' : linkContacto.texto}">
+                <span class="material-symbols-rounded" style="font-size:1.6rem;">${linkContacto.icono}</span>
+                ${linkContacto.texto}
+              </a>
               <button onclick="toggleAtendido('${c.id}')"
                 class="btn btn-sm ${atendido ? 'btn-outline' : 'btn-fill'}"
-                style="flex:1;justify-content:center;">
+                style="grid-column:1;min-width:0;width:100%;justify-content:center;white-space:normal;">
                 <span class="material-symbols-rounded" style="font-size:1.6rem;">${atendido ? 'undo' : 'check_circle'}</span>
                 ${atendido ? 'Marcar pendiente' : 'Marcar atendido'}
               </button>
               <button onclick="eliminarContacto('${c.id}')"
                 class="btn btn-danger btn-sm"
+                style="grid-column:2;grid-row:1 / span 2;width:38px;min-width:38px;padding:8px;justify-content:center;align-self:center;"
                 title="Eliminar mensaje">
                 <span class="material-symbols-rounded" style="font-size:1.6rem;">delete</span>
               </button>
