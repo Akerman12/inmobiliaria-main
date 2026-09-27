@@ -239,7 +239,7 @@ function renderizarPropiedades(lista, contenedor) {
           <div class="img-holder" style="--width:4;--height:3;">
             <img loading="lazy" src="${imagenUrl}" alt="${p.titulo}" class="img-cover" onerror="this.src='/img/default.jpg'">
           </div>
-          <span class="tag card-tag">${(p.operacion || 'venta') === 'arriendo' ? 'En Arriendo' : 'En Venta'}</span>
+          <span class="tag card-tag ${(p.operacion || 'venta') === 'arriendo' ? 'green' : ''}">${(p.operacion || 'venta') === 'arriendo' ? 'En Arriendo' : 'En Venta'}</span>
         </div>
         <div class="card-body">
           <h3 class="card-title title-small">

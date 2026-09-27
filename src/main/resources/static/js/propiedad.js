@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <!-- Info Card -->
             <div>
               <div class="property-info-card">
-                <span class="tag" style="margin-bottom:16px;">${(p.operacion || 'venta') === 'arriendo' ? 'En Arriendo' : 'En Venta'} · ${(p.tipo || 'otro').charAt(0).toUpperCase() + (p.tipo || 'otro').slice(1)}</span>
+                <span class="tag ${(p.operacion || 'venta') === 'arriendo' ? 'green' : ''}" style="margin-bottom:16px;">${(p.operacion || 'venta') === 'arriendo' ? 'En Arriendo' : 'En Venta'} · ${(p.tipo || 'otro').charAt(0).toUpperCase() + (p.tipo || 'otro').slice(1)}</span>
                 <h1 style="font-size:var(--fs-headline-small);color:var(--neutral-10);margin-bottom:8px;line-height:1.3;">${p.titulo}</h1>
 
                 ${locationStr ? `
