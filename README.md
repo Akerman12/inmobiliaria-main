@@ -1,10 +1,10 @@
 # Bienes Raíces
 
-Aplicación web de gestión inmobiliaria con Java 17, Spring Boot, Spring Security y MongoDB. Incluye un sitio público, un catálogo de propiedades, un panel administrativo y una API opcional de chat con Groq.
+Aplicación web de gestión inmobiliaria con Java 21, Spring Boot, Spring Security y MongoDB. Incluye un sitio público, un catálogo de propiedades, un panel administrativo y una API opcional de chat con Groq.
 
 ## Requisitos
 
-- Java 17.
+- JDK 21.
 - MongoDB activo en `localhost:27017`, con la base `bienesraices`.
 - La clave `GROQ_API_KEY` solo es necesaria para activar el chat de Groq. El resto de la aplicación puede iniciarse sin ella.
 
@@ -82,10 +82,17 @@ Ejemplo para `POST /api/v2/chat`:
 
 La clave no se guarda en el repositorio. La integración expone endpoints REST; no incluye por sí misma un widget de chat en las páginas.
 
+## Predicción de precios
+
+El proyecto utiliza Weka `3.8.6` mediante Maven y carga el modelo entrenado desde `src/main/resources/modelo_precio.model`. Los datos de entrenamiento están en `src/main/resources/propiedades_colombia.arff`.
+
+No es necesario instalar Weka para ejecutar la aplicación: Maven descarga la dependencia automáticamente. Para analizar el modelo manualmente, se puede instalar Weka 3.8.x para Windows y abrir el archivo ARFF desde **Explorer → Preprocess → Open file...**. Después, en **Classify**, se puede cargar `modelo_precio.model` desde las opciones del clasificador.
+
 ## Tecnologías
 
-- Java 17 y Spring Boot 3.4.
+- Java 21 y Spring Boot 3.4.
 - Spring Web, Spring Security, Spring Data MongoDB y Spring AI.
+- Weka 3.8.6 para el modelo de predicción de precios.
 - MongoDB.
 - HTML, CSS y JavaScript.
 - Maven Wrapper.

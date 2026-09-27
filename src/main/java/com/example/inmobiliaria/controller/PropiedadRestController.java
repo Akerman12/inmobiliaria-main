@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -24,11 +23,13 @@ import com.example.inmobiliaria.repository.PropiedadRepository;
 @CrossOrigin(origins = "*")
 public class PropiedadRestController {
 
-    @Autowired
-    private PropiedadRepository repo;
+    private final PropiedadRepository repo;
+    private final ImageStorageService imageStorageService;
 
-    @Autowired
-    private ImageStorageService imageStorageService;
+    public PropiedadRestController(PropiedadRepository repo, ImageStorageService imageStorageService) {
+        this.repo = repo;
+        this.imageStorageService = imageStorageService;
+    }
 
     @GetMapping
     public List<Propiedad> listar() {

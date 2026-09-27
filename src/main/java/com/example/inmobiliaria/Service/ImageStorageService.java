@@ -50,14 +50,20 @@ public class ImageStorageService {
 
     private final GridFsTemplate gridFsTemplate;
 
-    @Autowired
-    private MongoClient mongoClient;
+    private final MongoClient mongoClient;
 
     @Value("${spring.data.mongodb.database:bienesraices}")
     private String databaseName;
 
-    public ImageStorageService(@Qualifier("gridFsTemplate") GridFsTemplate gridFsTemplate) {
+    public ImageStorageService(GridFsTemplate gridFsTemplate) {
+        this(gridFsTemplate, null);
+    }
+
+    @Autowired
+    public ImageStorageService(@Qualifier("gridFsTemplate") GridFsTemplate gridFsTemplate,
+            MongoClient mongoClient) {
         this.gridFsTemplate = gridFsTemplate;
+        this.mongoClient = mongoClient;
     }
 
     public String store(MultipartFile upload) throws IOException {

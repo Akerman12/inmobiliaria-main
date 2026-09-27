@@ -2,7 +2,6 @@ package com.example.inmobiliaria.config;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
@@ -13,8 +12,11 @@ import com.example.inmobiliaria.repository.UsuarioRepository;
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+        private final UsuarioRepository usuarioRepository;
+
+        public CustomUserDetailsService(UsuarioRepository usuarioRepository) {
+                this.usuarioRepository = usuarioRepository;
+        }
 
     @Override
     public UserDetails loadUserByUsername(String username)
