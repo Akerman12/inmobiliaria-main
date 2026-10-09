@@ -14,6 +14,9 @@ public class Propiedad {
     private String titulo;
     private String descripcion;
     private String operacion = "venta";
+    private String propietarioId;
+    private String estadoComercial = "DISPONIBLE";
+    private long visitas;
     private String tipo = "otro";
     private double precio;
     private int habitaciones;
@@ -47,6 +50,15 @@ public class Propiedad {
 
     public String getOperacion() { return operacion == null ? "venta" : operacion; }
     public void setOperacion(String operacion) { this.operacion = operacion; }
+
+    public String getPropietarioId() { return propietarioId; }
+    public void setPropietarioId(String propietarioId) { this.propietarioId = propietarioId; }
+
+    public String getEstadoComercial() { return estadoComercial == null ? "DISPONIBLE" : estadoComercial; }
+    public void setEstadoComercial(String estadoComercial) { this.estadoComercial = estadoComercial; }
+
+    public long getVisitas() { return visitas; }
+    public void setVisitas(long visitas) { this.visitas = visitas; }
 
     public String getTipo() { return tipo == null ? "otro" : tipo; }
     public void setTipo(String tipo) { this.tipo = tipo; }

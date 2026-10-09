@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi panel | Propietarios</title>
+  <link rel="shortcut icon" href="/img/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0">
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <style>
+    .propietario-shell {
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+      min-height: 100vh;
+      background: var(--neutral-96);
+    }
+    .propietario-sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      background: #172433;
+      color: white;
+      padding: 24px 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+    .propietario-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .propietario-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .propietario-nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 12px;
+      border-radius: 8px;
+      color: rgba(255,255,255,0.86);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1.35rem;
+      transition: background 160ms ease, color 160ms ease;
+    }
+    .propietario-nav a.active,
+    .propietario-nav a:hover {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+    .propietario-nav a.active .material-symbols-rounded { color: #70d8ba; }
+    .owner-nav-count {
+      display:inline-grid;
+      place-items:center;
+      min-width:22px;
+      height:22px;
+      margin-left:auto;
+      padding-inline:6px;
+      border-radius:20px;
+      background:#b74949;
+      color:white;
+      font-size:1.1rem;
+      font-weight:700;
+    }
+    .propietario-main {
+      padding: 32px clamp(20px, 4vw, 56px);
+      min-width: 0;
+      max-width: 1600px;
+      width: 100%;
+      margin-inline: auto;
+    }
+    .owner-panel {
+      display: none;
+      animation: fadeIn 0.25s ease;
+    }
+    .owner-panel.is-visible {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .owner-panel-header {
+      margin-bottom: 18px;
+    }
+    .owner-panel-header h2 {
+      margin: 0;
+      color: var(--neutral-10);
+      font-size: clamp(1.5rem, 2vw, 2rem);
+    }
+    .owner-panel-header p {
+      margin: 8px 0 0;
+      color: var(--neutral-60);
+    }
+    .owner-page-heading {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .owner-page-heading h1 {
+      color: #172433;
+      font-size: 2.8rem;
+      line-height: 1.2;
+      margin: 0;
+    }
+    .owner-page-heading p {
+      margin: 8px 0 0;
+      color: var(--neutral-60);
+    }
+    .owner-current-date {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--neutral-50);
+      white-space: nowrap;
+      font-size: 1.3rem;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .stat-widget {
+      background: white;
+      border: 1px solid var(--neutral-90);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      box-shadow: 0 2px 8px rgba(23,36,51,0.04);
+      min-width: 0;
+    }
+    .stat-widget-icon {
+      width: 44px;
+      height: 44px;
+      flex: 0 0 44px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-size: 1.6rem;
+    }
+    .bg-blue { background: #2878c8; }
+    .bg-green { background: #15916b; }
+    .bg-yellow { background: #d18a13; }
+    .bg-red { background: #a64c4c; }
+    .stat-widget-value {
+      font-size: 2.1rem;
+      font-weight: 700;
+      color: #172433;
+      line-height: 1;
+    }
+    .stat-widget-label {
+      color: var(--neutral-60);
+      font-size: 1.2rem;
+      margin-top: 5px;
+      white-space: nowrap;
+    }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.85fr);
+      gap: 16px;
+      align-items: stretch;
+    }
+    .owner-surface {
+      width: 100%;
+      background: white;
+      border: 1px solid var(--neutral-90);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(23,36,51,0.04);
+      min-width: 0;
+    }
+    .owner-surface-header {
+      padding: 18px 20px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--neutral-95);
+    }
+    .owner-surface-header h2 {
+      color: #172433;
+      font-size: 1.55rem;
+      margin: 0;
+    }
+    .owner-surface-header p {
+      color: var(--neutral-60);
+      margin: 4px 0 0;
+      font-size: 1.25rem;
+    }
+    .owner-text-link {
+      color: #2169a8;
+      font-size: 1.25rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .owner-surface-body { padding: 18px 20px; }
+    .availability-summary {
+      display: grid;
+      gap: 16px;
+    }
+    .availability-line {
+      display: grid;
+      gap: 8px;
+    }
+    .availability-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--neutral-40);
+      font-size: 1.3rem;
+    }
+    .availability-label strong { color: #172433; }
+    .availability-track {
+      height: 7px;
+      background: #edf0f3;
+      overflow: hidden;
+      border-radius: 10px;
+    }
+    .availability-fill {
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      transition: width 240ms ease;
+    }
+    .availability-fill.available { background: #15916b; }
+    .availability-fill.in-process { background: #d18a13; }
+    .availability-note {
+      color: var(--neutral-60);
+      font-size: 1.2rem;
+      line-height: 1.5;
+      margin-top: 16px;
+    }
+    .owner-shortcuts {
+      display: grid;
+      gap: 8px;
+    }
+    .owner-shortcut {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--neutral-95);
+      border-radius: 8px;
+      color: #26384a;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease;
+    }
+    .owner-shortcut:hover { background: #f7fafc; border-color: #b9d3e8; }
+    .owner-shortcut .material-symbols-rounded { color: #2878c8; }
+    .owner-shortcut span:last-child { font-size: 1.3rem; font-weight: 600; }
+    .dashboard-properties { margin-top: 16px; }
+    .recent-property-list { display: grid; }
+    .recent-property {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 13px 20px;
+      border-bottom: 1px solid var(--neutral-95);
+    }
+    .recent-property:last-child { border-bottom: 0; }
+    .recent-property-image {
+      width: 58px;
+      height: 48px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: var(--neutral-95);
+    }
+    .recent-property-name {
+      color: #172433;
+      font-weight: 600;
+      font-size: 1.3rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .recent-property-meta {
+      color: var(--neutral-60);
+      font-size: 1.15rem;
+      margin-top: 3px;
+    }
+    .owner-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 20px;
+      padding: 5px 8px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .owner-status.available { color: #137254; background: #e7f5ef; }
+    .owner-status.in-process { color: #95610e; background: #fff4df; }
+    .owner-empty {
+      padding: 28px 20px;
+      color: var(--neutral-60);
+      text-align: center;
+      font-size: 1.3rem;
+    }
+    .consultation-list { display: grid; }
+    .owner-panel { width: 100%; min-width: 0; }
+    #listaConsultas {
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+      align-items: start;
+      gap: 14px;
+      padding: 16px;
+    }
+    .consultation-item {
+      padding: 18px 20px;
+      border: 1px solid var(--neutral-95);
+      border-radius: 8px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(23,36,51,0.035);
+      min-width: 0;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .consultation-item:hover { border-color: #c7d9e5; box-shadow: 0 6px 16px rgba(23,36,51,0.07); }
+    .consultation-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .consultation-name { color: #172433; font-size: 1.4rem; font-weight: 600; }
+    .consultation-person { display:flex; align-items:center; gap:11px; }
+    .consultation-avatar {
+      display:grid;
+      place-items:center;
+      width:38px;
+      height:38px;
+      flex:0 0 38px;
+      border-radius:50%;
+      background:#e7f0f5;
+      color:#285d75;
+      font-size:1.25rem;
+      font-weight:700;
+    }
+    .consultation-property, .consultation-date {
+      color: var(--neutral-60);
+      font-size: 1.2rem;
+      margin-top: 4px;
+    }
+    .consultation-message {
+      color: var(--neutral-40);
+      line-height: 1.6;
+      margin: 14px 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .consultation-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .consultation-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 36px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: #eef5fa;
+      color: #245e83;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    .consultation-status {
+      flex: 0 0 auto;
+      border-radius: 20px;
+      padding: 5px 9px;
+      color: #965f0d;
+      background: #fff4df;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .consultation-status.attended { color: #137254; background: #e7f5ef; }
+    .consultation-status.confirmed { color: #137254; background: #e7f5ef; }
+    .consultation-status.rejected { color: #a33b3b; background: #fce8e8; }
+    .visit-management-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+    .visit-management-actions button {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      min-height:36px;
+      padding:6px 10px;
+      border:1px solid var(--neutral-90);
+      border-radius:6px;
+      background:white;
+      color:#334155;
+      font-size:1.2rem;
+      font-weight:600;
+      cursor:pointer;
+    }
+    .visit-management-actions button:hover { background:#f7fafc; }
+    .visit-management-actions .confirm-visit { border-color:#b8e0cd; color:#137254; }
+    .visit-management-actions .reject-visit { border-color:#edc5c5; color:#a33b3b; }
+    .consultation-toolbar {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px 18px;
+      border-bottom:1px solid var(--neutral-95);
+      background:#fbfcfd;
+    }
+    .consultation-search {
+      display:flex;
+      align-items:center;
+      gap:9px;
+      min-width:220px;
+      max-width:420px;
+      flex:1;
+      height:40px;
+      padding:0 11px;
+      border:1px solid var(--neutral-90);
+      border-radius:7px;
+      background:white;
+      color:var(--neutral-60);
+    }
+    .consultation-search input {
+      border:0;
+      outline:0;
+      min-width:0;
+      color:#26384a;
+      font-size:1.25rem;
+    }
+    .consultation-filter {
+      width:auto;
+      min-width:150px;
+      height:40px;
+      padding:0 10px;
+      border:1px solid var(--neutral-90);
+      border-radius:7px;
+      background:white;
+      color:#26384a;
+      font-size:1.2rem;
+    }
+    .consultation-summary {
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:1px;
+      background:var(--neutral-95);
+      border-bottom:1px solid var(--neutral-95);
+    }
+    .consultation-summary-item {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      padding:12px 18px;
+      background:white;
+      color:var(--neutral-60);
+      font-size:1.2rem;
+    }
+    .consultation-summary-item strong { color:#172433; font-size:1.55rem; }
+    .consultation-message {
+      padding:11px 13px;
+      border-left:3px solid #d5e4f0;
+      border-radius:0 6px 6px 0;
+      background:#f7f9fb;
+    }
+    .owner-panel-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:16px;
+    }
+    .owner-panel-header h2 { font-size:2.25rem; }
+    .owner-panel-header p { max-width:680px; }
+    .property-management-header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:16px 20px;
+      border-bottom:1px solid var(--neutral-95);
+    }
+    .property-management-header h3 { margin:0; color:#172433; font-size:1.5rem; }
+    .property-management-header p { margin:4px 0 0; color:var(--neutral-60); font-size:1.2rem; }
+    .owner-panel .data-table tbody tr { transition:background 140ms ease; }
+    .owner-panel .data-table tbody tr:hover { background:#f8fafb; }
+    .owner-panel .data-table td:first-child { min-width:230px; }
+    .owner-property-toolbar {
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 190px;
+      gap:10px;
+      padding:14px 18px;
+      border-bottom:1px solid var(--neutral-95);
+      background:#fbfcfd;
+    }
+    .owner-property-search, .owner-property-filter {
+      height:40px;
+      border:1px solid var(--neutral-90);
+      border-radius:7px;
+      background:white;
+      color:#26384a;
+      font-size:1.2rem;
+    }
+    .owner-property-search { padding:0 12px; }
+    .owner-property-filter { padding:0 10px; }
+    .owner-property-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(min(100%,285px),1fr));
+      gap:14px;
+      padding:16px;
+    }
+    .owner-property-card {
+      overflow:hidden;
+      border:1px solid var(--neutral-90);
+      border-radius:8px;
+      background:white;
+      transition:box-shadow 160ms ease, transform 160ms ease;
+    }
+    .owner-property-card:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(23,36,51,.09); }
+    .owner-property-image-wrap { position:relative; aspect-ratio:16/9; background:#edf1f4; }
+    .owner-property-image { width:100%; height:100%; object-fit:cover; }
+    .owner-property-operation {
+      position:absolute;
+      left:11px;
+      top:11px;
+      padding:5px 9px;
+      border-radius:20px;
+      background:rgba(23,36,51,.88);
+      color:white;
+      font-size:1.05rem;
+      font-weight:600;
+    }
+    .owner-property-content { padding:14px; }
+    .owner-property-title { color:#172433; font-size:1.45rem; font-weight:700; line-height:1.4; }
+    .owner-property-location { display:flex; align-items:center; gap:5px; margin-top:4px; color:var(--neutral-60); font-size:1.2rem; }
+    .owner-property-facts { display:flex; gap:12px; margin-top:12px; color:var(--neutral-50); font-size:1.15rem; }
+    .owner-property-facts span { display:inline-flex; align-items:center; gap:4px; }
+    .owner-property-facts .material-symbols-rounded { color:#2878c8; font-size:1.6rem; }
+    .owner-property-footer {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-top:14px;
+      padding-top:12px;
+      border-top:1px solid var(--neutral-95);
+    }
+    .owner-property-price { color:#172433; font-size:1.45rem; font-weight:700; }
+    .owner-property-state { display:grid; gap:6px; margin-top:12px; }
+    .owner-property-state label { color:var(--neutral-60); font-size:1.1rem; }
+    .owner-property-state select {
+      width:100%;
+      height:38px;
+      padding:0 10px;
+      border:1px solid var(--neutral-90);
+      border-radius:6px;
+      background:white;
+      color:#26384a;
+      font-size:1.2rem;
+    }
+    .owner-panel-header {
+      padding: 4px 0 18px;
+    }
+    .owner-panel-header h2 { font-size: 2.2rem; }
+    .owner-panel .admin-card {
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(23,36,51,0.04);
+    }
+    .owner-panel .data-table th {
+      background: #f7f9fb;
+      color: #5e6b78;
+      font-size: 1.15rem;
+      text-transform: uppercase;
+    }
+    .owner-panel .data-table td { padding-block: 14px; }
+    .owner-panel .data-table select.form-control {
+      min-width: 145px;
+      border: 1px solid var(--neutral-90);
+      border-radius: 6px;
+      padding: 8px 10px;
+      background-color: white;
+      font-size: 1.2rem;
+    }
+    @media (max-width: 900px) {
+      .propietario-shell {
+        grid-template-columns: 1fr;
+      }
+      .propietario-sidebar {
+        position: relative;
+        height: auto;
+        padding: 14px 16px;
+        gap: 14px;
+      }
+      .propietario-nav {
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 3px;
+      }
+      .propietario-nav a { flex: 0 0 auto; }
+      .propietario-sidebar form { margin-top: 0 !important; align-self: flex-end; }
+      .propietario-sidebar form .btn { width: auto !important; }
+      .dashboard-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(230px, 0.8fr);
+      }
+      .stats-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 560px) {
+      .propietario-main { padding: 20px 14px; }
+      .owner-page-heading { align-items: flex-start; flex-direction: column; }
+      .owner-current-date { white-space: normal; }
+      .stats-row { gap: 9px; }
+      .stat-widget { padding: 12px 10px; gap: 9px; }
+      .stat-widget-icon { width: 36px; height: 36px; flex-basis: 36px; }
+      .stat-widget-value { font-size: 1.8rem; }
+      .stat-widget-label { white-space: normal; font-size: 1.05rem; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .recent-property { padding-inline: 12px; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 9px; }
+      .recent-property-image { width: 48px; height: 44px; }
+      .owner-status { font-size: 0.95rem; padding: 4px 6px; }
+      .owner-surface-header, .owner-surface-body { padding-inline: 14px; }
+      #listaConsultas { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+      .consultation-item { padding: 15px 14px; }
+      .consultation-heading { flex-direction: column; gap: 8px; }
+      .consultation-toolbar { align-items:stretch; flex-direction:column; padding:12px; }
+      .consultation-search { max-width:none; }
+      .consultation-filter { width:100%; }
+      .consultation-summary-item { align-items:flex-start; flex-direction:column; padding:10px; }
+      .owner-panel-header { align-items:flex-start; flex-direction:column; }
+      .property-management-header { padding-inline:14px; }
+      .owner-property-toolbar { grid-template-columns:1fr; padding:12px; }
+      .owner-property-grid { grid-template-columns:1fr; padding:12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .owner-panel, .availability-fill { animation: none; transition: none; }
+    }
+  </style>
+</head>
+<body class="admin-body">
+  <div class="propietario-shell">
+    <aside class="propietario-sidebar">
+      <div class="propietario-brand">
+        <img src="/img/logo.svg" alt="Belar" width="42" height="42" style="border-radius:12px;">
+        <div>
+          <div style="font-size:1.1rem;">BienesRaíces</div>
+          <small style="opacity:0.75;">Panel propietario</small>
+        </div>
+      </div>
+
+      <nav class="propietario-nav">
+        <a href="#panel-dashboard" class="nav-panel-link active" data-panel="panel-dashboard"><span class="material-symbols-rounded">dashboard</span> Dashboard</a>
+        <a href="#panel-propiedades" class="nav-panel-link" data-panel="panel-propiedades"><span class="material-symbols-rounded">home</span> Mis propiedades</a>
+        <a href="#panel-visitas" class="nav-panel-link" data-panel="panel-visitas"><span class="material-symbols-rounded">event</span> Visitas</a>
+        <a href="#panel-consultas" class="nav-panel-link" data-panel="panel-consultas"><span class="material-symbols-rounded">mail</span> Consultas <span id="consultasNavBadge" class="owner-nav-count" hidden>0</span></a>
+        <a href="/"><span class="material-symbols-rounded">open_in_new</span> Ver sitio</a>
+      </nav>
+
+      <form action="/logout" method="post" style="margin-top:auto;">
+        <button type="submit" class="btn btn-danger btn-sm" style="width:100%;justify-content:center;">
+          <span class="material-symbols-rounded">logout</span>
+          Cerrar sesión
+        </button>
+      </form>
+    </aside>
+
+    <main class="propietario-main">
+      <section id="panel-dashboard" class="owner-panel is-visible">
+        <div class="owner-page-heading">
+          <div class="page-header-info">
+            <h1>Mi panel</h1>
+            <p>Resumen de tus inmuebles y su disponibilidad</p>
+          </div>
+          <div class="owner-current-date">
+            <span class="material-symbols-rounded">calendar_today</span>
+            <span id="fechaDashboard"></span>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-widget">
+            <div class="stat-widget-icon bg-blue"><span class="material-symbols-rounded">home</span></div>
+            <div>
+              <div id="totalPropiedades" class="stat-widget-value">0</div>
+              <div class="stat-widget-label">Propiedades</div>
+            </div>
+          </div>
+
+          <div class="stat-widget">
+            <div class="stat-widget-icon bg-green"><span class="material-symbols-rounded">visibility</span></div>
+            <div>
+              <div id="disponibles" class="stat-widget-value">0</div>
+              <div class="stat-widget-label">Disponibles</div>
+            </div>
+          </div>
+
+          <div class="stat-widget">
+            <div class="stat-widget-icon bg-yellow"><span class="material-symbols-rounded">pending_actions</span></div>
+            <div>
+              <div id="enProceso" class="stat-widget-value">0</div>
+              <div class="stat-widget-label">En proceso</div>
+            </div>
+          </div>
+
+          <div class="stat-widget">
+            <div class="stat-widget-icon bg-red"><span class="material-symbols-rounded">visibility</span></div>
+            <div>
+              <div id="visitasTotales" class="stat-widget-value">0</div>
+              <div class="stat-widget-label">Solicitudes</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <section class="owner-surface" aria-labelledby="resumenCarteraTitulo">
+            <div class="owner-surface-header">
+              <div>
+                <h2 id="resumenCarteraTitulo">Disponibilidad de cartera</h2>
+                <p>Estado comercial de tus propiedades</p>
+              </div>
+              <button type="button" class="owner-text-link" data-open-panel="panel-propiedades">Ver inmuebles</button>
+            </div>
+            <div class="owner-surface-body">
+              <div class="availability-summary">
+                <div class="availability-line">
+                  <div class="availability-label"><span>Disponibles</span><strong id="resumenDisponibles">0</strong></div>
+                  <div class="availability-track"><div id="barraDisponibles" class="availability-fill available"></div></div>
+                </div>
+                <div class="availability-line">
+                  <div class="availability-label"><span>En proceso</span><strong id="resumenEnProceso">0</strong></div>
+                  <div class="availability-track"><div id="barraEnProceso" class="availability-fill in-process"></div></div>
+                </div>
+              </div>
+              <p class="availability-note">Los indicadores se actualizan con el estado que asignas a cada inmueble.</p>
+            </div>
+          </section>
+
+          <section class="owner-surface" aria-labelledby="atajosTitulo">
+            <div class="owner-surface-header">
+              <div>
+                <h2 id="atajosTitulo">Accesos rápidos</h2>
+                <p>Ir directamente a una sección</p>
+              </div>
+            </div>
+            <div class="owner-surface-body owner-shortcuts">
+              <button type="button" class="owner-shortcut" data-open-panel="panel-propiedades">
+                <span class="material-symbols-rounded">home_work</span><span>Gestionar propiedades</span>
+              </button>
+              <button type="button" class="owner-shortcut" data-open-panel="panel-visitas">
+                <span class="material-symbols-rounded">event</span><span>Revisar visitas</span>
+              </button>
+              <button type="button" class="owner-shortcut" data-open-panel="panel-consultas">
+                <span class="material-symbols-rounded">mail</span><span>Revisar consultas</span>
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <section class="owner-surface dashboard-properties" aria-labelledby="inmueblesRecientesTitulo">
+          <div class="owner-surface-header">
+            <div>
+              <h2 id="inmueblesRecientesTitulo">Tus inmuebles</h2>
+              <p>Vista rápida de tus propiedades</p>
+            </div>
+            <button type="button" class="owner-text-link" data-open-panel="panel-propiedades">Ver todas</button>
+          </div>
+          <div id="propiedadesRecientes" class="recent-property-list">
+            <div class="owner-empty">Cargando tus propiedades...</div>
+          </div>
+        </section>
+      </section>
+
+      <section id="panel-propiedades" class="owner-panel">
+        <div class="owner-panel-header">
+          <h2>Mis propiedades</h2>
+          <p>Gestiona el estado y revisa cada inmueble desde aquí.</p>
+        </div>
+
+        <div class="owner-surface">
+          <div class="property-management-header">
+            <div>
+              <h3>Cartera de propiedades</h3>
+              <p>Actualiza disponibilidad y consulta cada inmueble</p>
+            </div>
+            <span id="propiedadesCount" class="owner-status available">0 inmuebles</span>
+          </div>
+          <div class="owner-property-toolbar">
+            <input id="buscarPropiedades" class="owner-property-search" type="search" placeholder="Buscar por nombre o ciudad" aria-label="Buscar propiedades">
+            <select id="filtroEstadoPropiedades" class="owner-property-filter" aria-label="Filtrar propiedades por estado">
+              <option value="TODAS">Todos los estados</option>
+              <option value="DISPONIBLE">Disponibles</option>
+              <option value="EN_PROCESO">En proceso</option>
+            </select>
+          </div>
+          <div id="listaPropiedades" class="owner-property-grid" aria-live="polite">
+            <div class="owner-empty">Cargando propiedades...</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="panel-visitas" class="owner-panel">
+        <div class="owner-panel-header">
+          <h2>Visitas</h2>
+          <p>Confirma o rechaza las solicitudes de recorrido para tus inmuebles.</p>
+        </div>
+        <div class="owner-surface">
+          <div class="owner-surface-header">
+            <div>
+              <h2>Solicitudes de visita</h2>
+              <p>Las nuevas solicitudes quedan pendientes hasta que respondas</p>
+            </div>
+            <span id="visitasTotal" class="owner-status available">0 solicitudes</span>
+          </div>
+          <div id="listaVisitas" class="consultation-list" aria-live="polite">
+            <div class="owner-empty">Cargando solicitudes...</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="panel-consultas" class="owner-panel">
+        <div class="owner-panel-header">
+          <h2>Consultas</h2>
+          <p>Revisa mensajes, solicitudes y clientes interesados.</p>
+        </div>
+        <div class="owner-surface">
+          <div class="owner-surface-header">
+            <div>
+              <h2>Mensajes recibidos</h2>
+              <p>Consultas relacionadas con tus propiedades</p>
+            </div>
+          </div>
+          <div class="consultation-summary" aria-label="Resumen de consultas">
+            <div class="consultation-summary-item"><span>Total de mensajes</span><strong id="consultasTotal">0</strong></div>
+            <div class="consultation-summary-item"><span>Pendientes</span><strong id="consultasPendientes">0</strong></div>
+            <div class="consultation-summary-item"><span>Atendidas</span><strong id="consultasAtendidas">0</strong></div>
+          </div>
+          <div class="consultation-toolbar">
+            <label class="consultation-search">
+              <span class="material-symbols-rounded">search</span>
+              <input id="buscarConsultas" type="search" placeholder="Buscar cliente, propiedad o mensaje" aria-label="Buscar consultas">
+            </label>
+            <select id="filtroConsultas" class="consultation-filter" aria-label="Filtrar consultas por estado">
+              <option value="TODAS">Todos los mensajes</option>
+              <option value="PENDIENTE">Pendientes</option>
+              <option value="ATENDIDA">Atendidas</option>
+            </select>
+          </div>
+          <div id="listaConsultas" class="consultation-list" aria-live="polite">
+            <div class="owner-empty">Cargando consultas...</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/js/propietario.js"></script>
+</body>
+</html>

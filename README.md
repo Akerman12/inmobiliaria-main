@@ -55,6 +55,42 @@ Para ejecutar las pruebas:
 - Los números de WhatsApp sin indicativo reciben el prefijo colombiano `57`; si falta el dato requerido, la acción aparece deshabilitada.
 - Las tarjetas conservan un ancho mínimo y ajustan textos largos y acciones para que permanezcan dentro de sus límites.
 
+### Portales de propietario y cliente
+
+Los roles `ADMIN`, `PROPIETARIO` y `CLIENTE` comparten la pantalla de inicio de sesión `/admin/login.html`. Después de autenticar, Spring Security redirige cada cuenta a su portal:
+
+- `ADMIN`: `/admin/index.html`.
+- `PROPIETARIO`: `/propietario/index.html`.
+- `CLIENTE`: `/cliente/index.html`.
+
+El panel del propietario muestra su cartera en tarjetas, permite buscar por nombre o ciudad, filtrar por disponibilidad y cambiar el estado comercial entre `DISPONIBLE` y `EN_PROCESO`. También incluye consultas y solicitudes de visita asociadas a sus propiedades. El portal del cliente permite explorar propiedades disponibles, solicitar una visita indicando fecha y hora, y consultar el estado de sus solicitudes.
+
+#### Asignar una propiedad
+
+La asignación se administra desde **Admin → Propiedades**. Selecciona una cuenta habilitada con rol `PROPIETARIO` en la columna **Propietario** y guarda el cambio. La propiedad almacena el ID de la cuenta en `propietarioId`; los mensajes y las solicitudes de visita se filtran con esa relación. También se puede elegir **Sin asignar**. Las propiedades creadas por el administrador quedan sin propietario hasta que se asignen desde esta pantalla.
+
+#### Consultas
+
+Los mensajes enviados desde el formulario público se guardan en MongoDB. En el portal del propietario, **Consultas** muestra solo los mensajes que hacen referencia a propiedades realmente asignadas a esa cuenta. Permite buscar por cliente, inmueble o texto del mensaje, filtrar entre pendientes y atendidas, y responder por correo o teléfono.
+
+#### Solicitudes de visita
+
+Desde el portal del cliente, **Solicitar visita** abre un formulario para elegir fecha y hora futuras y añadir un mensaje opcional. La solicitud se guarda en la colección `visitas` con la propiedad, el cliente y el propietario correspondiente. Las nuevas solicitudes quedan `SOLICITADA`; el propietario puede cambiarlas a `CONFIRMADA` o `RECHAZADA`, y marcar una visita confirmada como `COMPLETADA`. El cliente puede consultar el estado desde **Mis visitas**.
+
+Solo se admiten visitas para propiedades visibles, asignadas a un propietario y que no estén en `EN_PROCESO`. Ese estado también quita la propiedad del catálogo de clientes y deshabilita el contacto desde su ficha pública.
+
+#### Cuentas de demostración
+
+En entornos de desarrollo, `DataInitializer` crea estas cuentas si no existen:
+
+| Rol | Usuario | Contraseña |
+| --- | --- | --- |
+| Administrador | `admin` | `admin123` |
+| Propietario | `propietario` | `propietario123` |
+| Cliente | `cliente` | `cliente123` |
+
+Son credenciales de demostración. Antes de desplegar, reemplázalas por cuentas seguras y elimina o desactiva las credenciales por defecto. El usuario demo `propietario` conserva una compatibilidad temporal: si no tiene propiedades asignadas, su lista puede mostrar todas las propiedades, pero no puede modificarlas sin una asignación real. No uses ese fallback en producción.
+
 ### Imágenes
 
 Las imágenes nuevas se guardan en GridFS dentro de la misma base MongoDB, en las colecciones `imagenesPropiedades.files` e `imagenesPropiedades.chunks`, no en el disco del servidor. GridFS crea un documento en `.files` por archivo y uno o más bloques en `.chunks`; por eso varias imágenes producen varios documentos. Cada archivo incluye en `metadata` el ID y título de la propiedad, su número de imagen y el nombre original; el filename también identifica la propiedad. Las imágenes JPG y PNG se redimensionan a un máximo de 1600 px y se comprimen como JPEG; WEBP se conserva en su formato. Las URLs usan `/api/imagenes/{id}` y se sirven con caché HTTP. El bucket anterior `fs` sigue disponible para leer y eliminar imágenes ya guardadas allí; las rutas antiguas `/uploads/...` siguen disponibles mientras sus archivos locales existan.

@@ -20,6 +20,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const res = await fetch(`http://localhost:8080/api/propiedades/${id}`);
     if (!res.ok) throw new Error('Propiedad no encontrada');
     const p = await res.json();
+    const enProceso = (p.estadoComercial || '').toUpperCase() === 'EN_PROCESO';
+    const operacion = (p.operacion || 'venta').toLowerCase();
+    const etiquetaOperacion = operacion === 'arriendo' ? 'En Arriendo' : 'En Venta';
+    const contactoHtml = enProceso
+      ? `<div role="status" style="width:100%;padding:14px 16px;border-radius:var(--radius-small);background:#FFF7ED;color:#9A3412;display:flex;align-items:center;gap:10px;line-height:1.5;">
+          <span class="material-symbols-rounded">hourglass_top</span>
+          Esta propiedad está en proceso de ${operacion}. Por ahora no recibe consultas.
+        </div>`
+      : `<a href="/contacto.html?propiedadId=${encodeURIComponent(p.id)}" class="btn btn-fill" style="width:100%;justify-content:center;">
+          <span class="material-symbols-rounded">mail</span>
+          Contactar asesor
+        </a>`;
 
     const imagenes = (p.imagenes && p.imagenes.length > 0) ? p.imagenes : ['/img/default.jpg'];
     const imagenPrincipal = imagenes[0];
@@ -102,7 +114,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <!-- Info Card -->
             <div>
               <div class="property-info-card">
-                <span class="tag ${(p.operacion || 'venta') === 'arriendo' ? 'green' : ''}" style="margin-bottom:16px;">${(p.operacion || 'venta') === 'arriendo' ? 'En Arriendo' : 'En Venta'} · ${(p.tipo || 'otro').charAt(0).toUpperCase() + (p.tipo || 'otro').slice(1)}</span>
+                <span class="tag ${operacion === 'arriendo' ? 'green' : ''}" style="margin-bottom:16px;">${etiquetaOperacion} · ${(p.tipo || 'otro').charAt(0).toUpperCase() + (p.tipo || 'otro').slice(1)}</span>
+                ${enProceso ? '<span class="tag" style="display:table;margin:-8px 0 16px;background:#FFF7ED;color:#9A3412;">En proceso</span>' : ''}
                 <h1 style="font-size:var(--fs-headline-small);color:var(--neutral-10);margin-bottom:8px;line-height:1.3;">${p.titulo}</h1>
 
                 ${locationStr ? `
@@ -144,10 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
 
                 <div style="margin-top:24px;display:flex;flex-direction:column;gap:12px;">
-                  <a href="/contacto.html?propiedadId=${p.id}" class="btn btn-fill" style="width:100%;justify-content:center;">
-                    <span class="material-symbols-rounded">mail</span>
-                    Contactar asesor
-                  </a>
+                  ${contactoHtml}
                   ${hasCoords ? `
                   <button onclick="document.getElementById('mapaPropiedad')?.scrollIntoView({behavior:'smooth'})"
                     class="btn btn-outline" style="width:100%;justify-content:center;">

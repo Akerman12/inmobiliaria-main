@@ -55,9 +55,38 @@ public class DataInitializer {
                 System.out.println("");
                 System.out.println("⚠️  IMPORTANTE: Cambia esta contraseña en producción");
                 System.out.println("");
-                
             } else {
                 System.out.println("Usuario administrador ya existe en la base de datos");
+            }
+
+            if (!usuarioRepository.existsByUsername("propietario")) {
+                Usuario propietario = new Usuario();
+                propietario.setNombre("Propietario Demo");
+                propietario.setUsername("propietario");
+                propietario.setEmail("propietario@inmobiliaria.com");
+                propietario.setPassword(passwordEncoder.encode("propietario123"));
+                propietario.setRol("PROPIETARIO");
+                propietario.setEnabled(true);
+                usuarioRepository.save(propietario);
+
+                System.out.println("✓ Usuario propietario creado exitosamente");
+                System.out.println("  Username: propietario");
+                System.out.println("  Password: propietario123");
+            }
+
+            if (!usuarioRepository.existsByUsername("cliente")) {
+                Usuario cliente = new Usuario();
+                cliente.setNombre("Cliente Demo");
+                cliente.setUsername("cliente");
+                cliente.setEmail("cliente@inmobiliaria.com");
+                cliente.setPassword(passwordEncoder.encode("cliente123"));
+                cliente.setRol("CLIENTE");
+                cliente.setEnabled(true);
+                usuarioRepository.save(cliente);
+
+                System.out.println("✓ Usuario cliente creado exitosamente");
+                System.out.println("  Username: cliente");
+                System.out.println("  Password: cliente123");
             }
         };
     }

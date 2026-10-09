@@ -26,7 +26,8 @@ public class PropiedadRestController {
     private final PropiedadRepository repo;
     private final ImageStorageService imageStorageService;
 
-    public PropiedadRestController(PropiedadRepository repo, ImageStorageService imageStorageService) {
+    public PropiedadRestController(PropiedadRepository repo,
+                                  ImageStorageService imageStorageService) {
         this.repo = repo;
         this.imageStorageService = imageStorageService;
     }

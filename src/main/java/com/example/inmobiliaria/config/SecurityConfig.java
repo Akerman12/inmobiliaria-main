@@ -73,17 +73,22 @@ public class SecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/api/v2/chat/salud", "GET")).permitAll()
 
                     .requestMatchers(HttpMethod.GET, "/api/propiedades/**", "/api/imagenes/**").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/contacto").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/propiedades/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.PUT, "/api/propiedades/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.PATCH, "/api/propiedades/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.DELETE, "/api/propiedades/**").hasRole("ADMIN")
                      .requestMatchers(HttpMethod.POST, "/api/imagenes/subir").hasRole("ADMIN")
 
-            
-                    
+                    .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                    .requestMatchers("/api/propietario/**").hasRole("PROPIETARIO")
+                    .requestMatchers("/api/cliente/**").hasRole("CLIENTE")
 
                 // Admin protegido
                 .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/propietario/**").hasRole("PROPIETARIO")
+                .requestMatchers("/cliente/**").hasRole("CLIENTE")
 
                 .anyRequest().authenticated()
             )
@@ -93,7 +98,20 @@ public class SecurityConfig {
                 .loginProcessingUrl("/login")
                 .usernameParameter("username")
                 .passwordParameter("password")
-                .defaultSuccessUrl("/admin/index.html", true)
+                .successHandler((request, response, authentication) -> {
+                    boolean isAdmin = authentication.getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+                    boolean isPropietario = authentication.getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().equals("ROLE_PROPIETARIO"));
+
+                    if (isAdmin) {
+                        response.sendRedirect("/admin/index.html");
+                    } else if (isPropietario) {
+                        response.sendRedirect("/propietario/index.html");
+                    } else {
+                        response.sendRedirect("/cliente/index.html");
+                    }
+                })
                 .failureUrl("/admin/login.html?error=true")
                 .permitAll()
             )

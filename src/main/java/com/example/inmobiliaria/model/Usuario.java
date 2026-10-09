@@ -20,7 +20,7 @@ public class Usuario {
     
     private String password; // Se almacena hasheada con BCrypt
     
-    private String rol; // ADMIN o USER
+    private String rol; // ADMIN, PROPIETARIO o USER
     
     private boolean enabled = true; // Para activar/desactivar usuarios
 

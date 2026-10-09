@@ -10,6 +10,8 @@ public interface UsuarioRepository extends MongoRepository<Usuario, String> {
     Optional<Usuario> findByUsername(String username);
 
     boolean existsByUsername(String username);
+
+    java.util.List<Usuario> findByRolAndEnabledTrue(String rol);
 }
 
 
