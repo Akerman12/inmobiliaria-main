@@ -12,8 +12,16 @@ Es una aplicacion web con:
 - Spring Data MongoDB para guardar propiedades, usuarios y contactos.
 - Spring Security para proteger el panel administrativo.
 - Weka 3.8.6 para estimar precios mediante regresion lineal.
-- Spring AI conectado al endpoint compatible con OpenAI de Groq para el chat.
+- Spring AI conectado a Groq para exponer endpoints de chat en el backend; no hay una interfaz de chat integrada en el sitio web.
 - HTML, CSS y JavaScript estatico en `src/main/resources/static`.
+
+En su alcance funcional actual, los visitantes pueden consultar el catalogo y
+contactar a la inmobiliaria. Las cuentas `CLIENTE` pueden explorar propiedades
+y solicitar visitas; las cuentas `PROPIETARIO` gestionan inmuebles asignados,
+consultas y solicitudes de visita. El personal `ADMIN` gestiona propiedades,
+propietarios y mensajes desde un panel protegido, que tambien incluye una
+herramienta para estimar precios. La API de chat es una capacidad tecnica del
+backend y no una funcion visible para los visitantes.
 
 La aplicacion se ejecuta en el puerto `8080` y usa MongoDB en `localhost:27017`.
 
@@ -72,6 +80,7 @@ Archivos principales:
 - `model/Propiedad.java`
 - `model/Usuario.java`
 - `model/Contacto.java`
+- `model/Visita.java`
 
 Ejemplo:
 
@@ -157,6 +166,7 @@ Archivos:
 - `repository/PropiedadRepository.java`
 - `repository/UsuarioRepository.java`
 - `repository/ContactoRepository.java`
+- `repository/VisitaRepository.java`
 
 Ejemplo de consulta derivada:
 
@@ -280,7 +290,9 @@ return User.builder()
 
 ### Roles
 
-Si el usuario tiene `rol = "ADMIN"`, se construye la autoridad `ROLE_ADMIN`.
+El campo `Usuario.rol` contiene uno de estos valores: `ADMIN`, `PROPIETARIO` o
+`CLIENTE`. `CustomUserDetailsService` los transforma en las autoridades
+`ROLE_ADMIN`, `ROLE_PROPIETARIO` y `ROLE_CLIENTE`.
 
 En `SecurityConfig.java`:
 
@@ -307,11 +319,26 @@ El panel `/admin/**` requiere autenticacion.
 .formLogin(form -> form
     .loginPage("/admin/login.html")
     .loginProcessingUrl("/login")
-    .defaultSuccessUrl("/admin/index.html", true)
+    .successHandler((request, response, authentication) -> {
+        boolean esAdmin = authentication.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        boolean esPropietario = authentication.getAuthorities().stream()
+            .anyMatch(a -> a.getAuthority().equals("ROLE_PROPIETARIO"));
+
+        if (esAdmin) {
+            response.sendRedirect("/admin/index.html");
+        } else if (esPropietario) {
+            response.sendRedirect("/propietario/index.html");
+        } else {
+            response.sendRedirect("/cliente/index.html");
+        }
+    })
 )
 ```
 
-Spring recibe el formulario en `/login`, autentica las credenciales y redirige al panel.
+Los tres roles usan el mismo formulario `/admin/login.html`; no comparten el
+mismo panel. Spring procesa las credenciales en `/login` y el `successHandler`
+de `SecurityConfig` redirige segun el rol autenticado.
 
 ```java
 .logout(logout -> logout
@@ -402,7 +429,11 @@ long precioRedondeado =
 
 La interfaz de `admin/crear.html` muestra el boton de estimacion. El JavaScript envia la peticion y permite usar el precio sugerido en el formulario.
 
-## 11. Groq y Spring AI
+## 11. API de chat del backend con Groq y Spring AI
+
+Esta seccion documenta endpoints disponibles para pruebas o integraciones. En
+el estado actual, el sitio web no incluye una pantalla, boton o widget para que
+los visitantes conversen con este servicio.
 
 Archivos:
 
@@ -499,7 +530,10 @@ POST /api/v2/chat
 POST /api/v2/chat/rapido?pregunta=...
 ```
 
-Groq genera respuestas de lenguaje. Weka estima precios con un modelo numerico ya entrenado; son funcionalidades distintas.
+Cuando se configura `GROQ_API_KEY`, estos endpoints del backend pueden generar
+respuestas de lenguaje. Esto no forma parte de la interfaz actual del sitio.
+Weka, en cambio, estima precios y su boton esta integrado en el formulario de
+creacion del panel administrativo.
 
 ## 12. Concatenacion y plantillas
 
@@ -670,7 +704,139 @@ GET http://localhost:8080/api/prediccion/estado
 
 Si devuelve `modeloCargado: true`, Weka encontro el modelo y el archivo ARFF.
 
-## 16. Resumen mental
+## 16. Portales, propiedad y atencion de clientes
+
+### Inicio de sesion y autorizacion
+
+`SecurityConfig` protege cada portal y sus APIs:
+
+| Rol | Panel | APIs |
+| --- | --- | --- |
+| `ADMIN` | `/admin/**` | `/api/admin/**` y operaciones de gestion en `/api/propiedades/**` |
+| `PROPIETARIO` | `/propietario/**` | `/api/propietario/**` |
+| `CLIENTE` | `/cliente/**` | `/api/cliente/**` |
+
+La pagina de login es compartida. El rol se carga desde MongoDB por
+`CustomUserDetailsService`; por eso la ruta de destino depende del valor real de
+`Usuario.rol`, no del nombre escrito en el formulario.
+
+`DataInitializer` crea las siguientes cuentas solo si no existen:
+
+| Rol | Usuario | Contrasena de demostracion |
+| --- | --- | --- |
+| `ADMIN` | `admin` | `admin123` |
+| `PROPIETARIO` | `propietario` | `propietario123` |
+| `CLIENTE` | `cliente` | `cliente123` |
+
+Estas credenciales son exclusivamente para desarrollo. Antes de publicar la
+aplicacion hay que sustituirlas y no habilitar cuentas con contrasenas
+conocidas.
+
+### Asignacion de una propiedad
+
+La relacion se guarda en `Propiedad.propietarioId`, que contiene el ID de un
+documento `Usuario` con rol `PROPIETARIO`.
+
+1. El administrador abre **Admin → Propiedades**.
+2. Selecciona un propietario habilitado en la columna **Propietario** y guarda.
+3. La interfaz llama a `GET /api/admin/propietarios` para listar propietarios
+    habilitados y a `PATCH /api/admin/propiedades/{id}/propietario` para asignar
+    o quitar la relacion.
+4. `AdminPropiedadController` valida en el servidor que la cuenta exista, este
+    habilitada y tenga rol `PROPIETARIO`.
+
+La creacion desde el panel admin deja la propiedad sin asignar; no se vincula
+al usuario administrador por defecto. El portal consulta las propiedades
+mediante `GET /api/propietario/propiedades`. Las operaciones de cambio de estado
+comprueban que `propietarioId` coincida con el usuario autenticado.
+
+Hay una compatibilidad temporal para el usuario demo `propietario`: si no tiene
+propiedades enlazadas, su lista puede mostrar todas las propiedades. Ese
+fallback es solo de visualizacion; no autoriza a modificar una propiedad sin
+asignacion real y debe retirarse antes de produccion.
+
+### Panel del propietario
+
+La pagina es `static/propietario/index.html` y su logica esta en
+`static/js/propietario.js`. El dashboard presenta conteos de propiedades,
+disponibilidad y solicitudes, un resumen de cartera y accesos a las secciones.
+**Mis propiedades** muestra tarjetas con imagen, operacion, ubicacion,
+caracteristicas, precio y cantidad de solicitudes. Permite buscar por nombre o
+ciudad, filtrar por estado comercial, abrir la ficha y cambiar el estado entre
+`DISPONIBLE` y `EN_PROCESO`.
+
+El cambio usa `PATCH /api/propietario/propiedades/{id}/estado`. El controller
+valida que la propiedad pertenezca al propietario autenticado. El contador
+`Propiedad.visitas` representa solicitudes de visita registradas, no vistas de
+la pagina.
+
+### Consultas
+
+El formulario publico de `contacto.html` envia un `Contacto` a
+`POST /api/contacto`. El campo `casaInteres` guarda el ID de la propiedad y
+`atendido` comienza en `false`.
+
+`GET /api/propietario/consultas` obtiene primero los IDs de las propiedades
+asignadas al usuario y busca solo contactos cuyo `casaInteres` coincida. El
+repositorio usa `findByCasaInteresInOrderByFechaCreacionDesc`; de esta forma un
+propietario no recibe mensajes de propiedades ajenas. La interfaz muestra
+pendientes y atendidas, permite buscar por cliente, inmueble o mensaje, filtrar
+por estado y responder mediante `mailto:` o `tel:`.
+
+Si una propiedad pasa a `EN_PROCESO`, la ficha publica oculta la accion de
+contacto y el backend responde `409 Conflict` ante un intento directo de enviar
+una consulta para ese inmueble.
+
+### Solicitudes de visita
+
+Una solicitud real es un documento de MongoDB en la coleccion `visitas`, modelado
+por `Visita.java`. Guarda `propiedadId`, `propiedadTitulo`, `propietarioId`,
+`clienteId`, nombre y correo del cliente, fecha/hora solicitada, mensaje,
+`estado` y fecha de solicitud.
+
+El cliente pulsa **Solicitar visita**, elige fecha y hora futuras y puede
+escribir un mensaje. `POST /api/cliente/visitas` obtiene el cliente desde la
+sesion autenticada; no confia en un ID de cliente enviado por el navegador.
+Tambien comprueba que la propiedad exista, este visible, tenga propietario
+asignado y no este `EN_PROCESO`. Las solicitudes se guardan como `SOLICITADA` y
+el contador de la propiedad aumenta.
+
+El cliente consulta sus propias solicitudes en `GET /api/cliente/visitas`. El
+propietario obtiene solo las dirigidas a su cuenta con
+`GET /api/propietario/visitas` y puede actualizar el estado con
+`PATCH /api/propietario/visitas/{id}/estado`. El servidor valida la propiedad de
+la solicitud y permite estas transiciones:
+
+```text
+SOLICITADA -> CONFIRMADA
+SOLICITADA -> RECHAZADA
+CONFIRMADA -> COMPLETADA
+```
+
+El portal del propietario muestra los datos y permite confirmar, rechazar o
+marcar una visita confirmada como realizada. El portal del cliente presenta el
+estado resultante en **Mis visitas**. Actualmente el sistema no envia
+notificaciones por correo, no bloquea horarios ocupados ni sincroniza un
+calendario externo; la solicitud queda pendiente hasta que el propietario la
+gestione.
+
+### Recorrido para probarlo
+
+1. Inicia MongoDB y la aplicacion.
+2. Inicia sesion como `admin` en `/admin/login.html`.
+3. En **Propiedades**, asigna una propiedad visible y disponible a la cuenta
+    `propietario`.
+4. Cierra sesion e inicia como `cliente`; solicita una visita para una fecha
+    futura.
+5. Inicia como `propietario`, abre **Visitas** y confirma o rechaza la
+    solicitud. En **Consultas** aparecen los mensajes asociados a sus
+    propiedades.
+6. Vuelve al portal del cliente para consultar el estado actualizado.
+
+Si el propietario cambia la propiedad a `EN_PROCESO`, deja de aparecer en el
+catalogo de solicitudes y no admite nuevos contactos ni visitas.
+
+## 17. Resumen mental
 
 - Spring Boot inicia y conecta las piezas.
 - Controllers exponen URLs.
@@ -679,6 +845,6 @@ Si devuelve `modeloCargado: true`, Weka encontro el modelo y el archivo ARFF.
 - Models representan documentos.
 - Security decide quien puede entrar o modificar.
 - Weka calcula una estimacion numerica de precio.
-- Groq genera respuestas de texto mediante Spring AI.
+- La API de Groq puede generar respuestas de texto desde el backend, pero no tiene interfaz visual en el sitio.
 - JavaScript consume los endpoints y actualiza la interfaz.
 - HTML define la estructura y CSS define la apariencia.
