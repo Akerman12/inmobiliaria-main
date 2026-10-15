@@ -51,6 +51,7 @@ Para ejecutar las pruebas:
 - Acceso con Spring Security y rol `ADMIN`; las contraseñas se protegen con BCrypt.
 - Alta y edición de propiedades con operación, tipo, precio, características, ubicación e imágenes.
 - Gestión de visibilidad y administración de contactos.
+- Optimización de campañas publicitarias con programación lineal y el método Simplex. Desde **Optimizar promociones**, el administrador ingresa la comisión esperada, el gasto publicitario y las horas de asesor por campaña completa, además de los recursos disponibles.
 - Las tarjetas de contacto ofrecen una acción según el medio preferido: llamar, responder por correo o abrir WhatsApp con un mensaje preparado.
 - Los números de WhatsApp sin indicativo reciben el prefijo colombiano `57`; si falta el dato requerido, la acción aparece deshabilitada.
 - Las tarjetas conservan un ancho mínimo y ajustan textos largos y acciones para que permanezcan dentro de sus límites.
@@ -68,6 +69,20 @@ El panel del propietario muestra su cartera en tarjetas, permite buscar por nomb
 #### Asignar una propiedad
 
 La asignación se administra desde **Admin → Propiedades**. Selecciona una cuenta habilitada con rol `PROPIETARIO` en la columna **Propietario** y guarda el cambio. La propiedad almacena el ID de la cuenta en `propietarioId`; los mensajes y las solicitudes de visita se filtran con esa relación. También se puede elegir **Sin asignar**. Las propiedades creadas por el administrador quedan sin propietario hasta que se asignen desde esta pantalla.
+
+#### Modelo de optimización de promociones
+
+Para cada propiedad publicada, `xᵢ` es la intensidad de promoción recomendada, entre 0 (no promocionar) y 1 (ejecutar la campaña completa). Todos los valores económicos se expresan en millones de COP:
+
+```text
+Maximizar Z = Σ comisión esperadaᵢ × xᵢ
+Sujeto a:
+  Σ presupuesto de publicidadᵢ × xᵢ ≤ presupuesto disponible
+  Σ horas de asesorᵢ × xᵢ ≤ horas disponibles
+  0 ≤ xᵢ ≤ 1
+```
+
+La comisión esperada y los recursos requeridos por campaña completa son estimaciones ingresadas por el administrador; el sistema no presupone una tasa de comisión ni una probabilidad de cierre. La API protegida para administradores recibe el modelo en `POST /api/admin/optimizacion-promocion/simplex`.
 
 #### Consultas
 
