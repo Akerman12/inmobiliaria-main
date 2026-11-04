@@ -15,6 +15,9 @@ public class Usuario {
     
     private String nombre;
     private String celular;
+
+    @Indexed(name = "celular_normalizado_unique_idx", unique = true, sparse = true)
+    private String celularNormalizado;
     
     @Indexed(unique = true)
     private String username; // Puede ser email o nombre de usuario
@@ -65,6 +68,14 @@ public class Usuario {
 
     public void setCelular(String celular) {
         this.celular = celular;
+    }
+
+    public String getCelularNormalizado() {
+        return celularNormalizado;
+    }
+
+    public void setCelularNormalizado(String celularNormalizado) {
+        this.celularNormalizado = celularNormalizado;
     }
 
     public String getUsername() {

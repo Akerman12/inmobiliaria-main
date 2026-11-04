@@ -415,6 +415,32 @@ textarea {
   color: #858176;
 }
 
+.password-input {
+  position: relative;
+}
+
+.password-input .form-control {
+  padding-right: 48px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  display: flex;
+  padding: 4px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: #b8b3a8;
+  cursor: pointer;
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--primary-100);
+  outline-offset: 2px;
+}
+
 .account-role-option {
   display: flex;
   min-height: 82px;

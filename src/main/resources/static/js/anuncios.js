@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   try {
     await window.BelarFavoritos.ready;
-    const res = await fetch('http://localhost:8080/api/propiedades/visibles');
+    const res = await fetch('/api/propiedades/visibles');
     if (!res.ok) throw new Error('Error al cargar propiedades');
     const propiedades = await res.json();
 

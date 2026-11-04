@@ -191,7 +191,7 @@
 
     async function cargarTestimonios() {
       try {
-        const res = await fetch('http://localhost:8080/api/testimonios');
+        const res = await fetch('/api/testimonios');
         if (!res.ok) throw new Error();
         todosLosTestimonios = await res.json();
         todosLosTestimonios.reverse();
@@ -301,8 +301,8 @@
 
       try {
         const url = id
-          ? `http://localhost:8080/api/testimonios/${id}`
-          : 'http://localhost:8080/api/testimonios';
+          ? `/api/testimonios/${id}`
+          : '/api/testimonios';
         const res = await fetch(url, {
           method: id ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -319,7 +319,7 @@
     // ── Visibilidad ──
     async function toggleVisibilidad(id) {
       try {
-        const res = await fetch(`http://localhost:8080/api/testimonios/${id}/visibilidad`, { method: 'PATCH' });
+        const res = await fetch(`/api/testimonios/${id}/visibilidad`, { method: 'PATCH' });
         if (!res.ok) throw new Error();
         await cargarTestimonios();
       } catch { alert('Error al cambiar visibilidad'); }
@@ -337,7 +337,7 @@
     document.getElementById('confirmarEliminarTestimonio').addEventListener('click', async () => {
       if (!idAEliminar) return;
       try {
-        const res = await fetch(`http://localhost:8080/api/testimonios/${idAEliminar}`, { method: 'DELETE' });
+        const res = await fetch(`/api/testimonios/${idAEliminar}`, { method: 'DELETE' });
         if (!res.ok) throw new Error();
         document.getElementById('modalEliminarTestimonio').style.display = 'none';
         idAEliminar = null;

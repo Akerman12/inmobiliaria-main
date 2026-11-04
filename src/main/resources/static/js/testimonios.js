@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!contenedor) return;
 
   try {
-    const res = await fetch('http://localhost:8080/api/testimonios/visibles');
+    const res = await fetch('/api/testimonios/visibles');
     if (!res.ok) throw new Error('Error al cargar testimonios');
     const testimonios = await res.json();
 

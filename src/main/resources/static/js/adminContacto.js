@@ -5,11 +5,11 @@ document.addEventListener("DOMContentLoaded", async function () {
     try {
 
         //  Traer contactos
-        const resContactos = await fetch("http://localhost:8080/api/contacto");
+        const resContactos = await fetch("/api/contacto");
         const contactos = await resContactos.json();
 
         //  Traer propiedades
-        const resPropiedades = await fetch("http://localhost:8080/api/propiedades");
+        const resPropiedades = await fetch("/api/propiedades");
         const propiedades = await resPropiedades.json();
 
         //  Crear mapa ID → Título

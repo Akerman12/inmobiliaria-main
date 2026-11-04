@@ -57,15 +57,20 @@
           <div id="login-panel" class="account-panel" role="tabpanel" aria-labelledby="login-tab">
             <h1 id="account-title" class="title-large">Bienvenido de vuelta</h1>
             <p>Ingresa para consultar tus favoritos y solicitudes.</p>
-            <form class="account-form" action="/login" method="post">
+            <form class="account-form" action="/login" method="post" autocomplete="off">
               <input type="hidden" name="publicLogin" value="true">
               <div class="form-group">
                 <label class="form-label" for="login-email">Correo electrónico</label>
-                <input class="form-control" type="email" id="login-email" name="username" autocomplete="username" placeholder="correo@ejemplo.com" required>
+                <input class="form-control" type="email" id="login-email" name="username" autocomplete="off" placeholder="correo@ejemplo.com" required>
               </div>
-              <div class="form-group">
+              <div class="form-group password-field">
                 <label class="form-label" for="login-password">Contraseña</label>
-                <input class="form-control" type="password" id="login-password" name="password" autocomplete="current-password" placeholder="Tu contraseña" required>
+                <div class="password-input">
+                  <input class="form-control" type="password" id="login-password" name="password" autocomplete="off" placeholder="Tu contraseña" required>
+                  <button class="password-toggle" type="button" id="toggleLoginPassword" aria-label="Mostrar contraseña" aria-pressed="false">
+                    <span class="material-symbols-rounded" aria-hidden="true">visibility</span>
+                  </button>
+                </div>
               </div>
               <button class="btn btn-fill" type="submit" style="width:100%;justify-content:center;">
                 <span class="material-symbols-rounded">login</span>

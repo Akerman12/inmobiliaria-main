@@ -5,7 +5,7 @@ Aplicación web de gestión inmobiliaria con Java 21, Spring Boot, Spring Securi
 ## Requisitos
 
 - JDK 21.
-- MongoDB activo en `localhost:27017`, con la base `bienesraices` (por defecto).
+- URI de MongoDB configurada en `.env.local` para desarrollo local o en el entorno de despliegue.
 - La clave `GROQ_API_KEY` solo es necesaria para activar el chat de Groq. El resto de la aplicación puede iniciarse sin ella.
 
 ## Ejecutar
@@ -24,9 +24,11 @@ export GROQ_API_KEY="tu_clave_de_groq" # Opcional: necesaria solo para el chat
 ./mvnw spring-boot:run
 ```
 
-Sin configurar la clave, la web y el catálogo siguen disponibles; los endpoints de chat no se registran. La aplicación utiliza el puerto `8080`. `MONGODB_URI` puede reemplazar la conexión local; si no se define, se usa MongoDB en `localhost`.
+Sin configurar la clave, la web y el catálogo siguen disponibles; los endpoints de chat no se registran. La aplicación utiliza el puerto `8080`. La conexión MongoDB requiere `MONGODB_URI`; no hay una conexión de respaldo a `localhost`.
 
 Para detener la aplicación iniciada desde la terminal, pulsa `Ctrl+C` en esa terminal. Si se ejecuta desde VS Code, usa el botón **Stop** de la sesión de depuración.
+
+Para que VS Code use Atlas, crea un archivo local `.env.local` en la raíz (está excluido de Git) con `MONGODB_URI=<URI privada de Atlas>`. Reinicia la aplicación para que Spring Boot cargue la URI. Si falta o es inválida, la aplicación debe fallar al conectar en vez de usar MongoDB local. No subas ese archivo ni pegues la URI en el repositorio.
 
 - Sitio público: <http://localhost:8080/>
 - Catálogo: <http://localhost:8080/anuncio.html>
@@ -75,7 +77,7 @@ La administración usa `/admin/login.html`, cuyo formulario solo acepta cuentas 
 - `PROPIETARIO`: `/propietario/index.html`.
 - `CLIENTE`: `/cliente/index.html`.
 
-El panel del propietario muestra su cartera en tarjetas, permite buscar por nombre o ciudad, filtrar por disponibilidad y cambiar el estado comercial entre `DISPONIBLE` y `EN_PROCESO`. También incluye consultas y solicitudes de visita asociadas a sus propiedades. Los propietarios pueden publicar y editar inmuebles; los anuncios quedan ocultos hasta la revisión administrativa. Ambos portales incluyen edición de perfil y cambio de contraseña. El portal del cliente permite explorar propiedades disponibles, guardar favoritos vinculados a su cuenta, solicitar una visita indicando fecha y hora, y consultar el estado de sus solicitudes. Los favoritos guardados antes de ingresar se pueden migrar a la cuenta al iniciar sesión. Los datos de registro y perfil se validan en el servidor.
+El panel del propietario muestra su cartera en tarjetas, permite buscar por nombre o ciudad, filtrar por disponibilidad y cambiar el estado comercial entre `DISPONIBLE` y `EN_PROCESO`. También incluye consultas y solicitudes de visita asociadas a sus propiedades. Los propietarios pueden publicar y editar inmuebles; los anuncios quedan ocultos hasta la revisión administrativa. Ambos portales incluyen edición de perfil y cambio de contraseña. El portal del cliente permite explorar propiedades disponibles, guardar favoritos vinculados a su cuenta, solicitar una visita indicando fecha y hora, y consultar el estado de sus solicitudes. Los favoritos guardados antes de ingresar se pueden migrar a la cuenta al iniciar sesión. Los datos de registro y perfil se validan en el servidor. El nombre y la contraseña pueden repetirse; cada correo y celular debe ser único, y la interfaz indica cuál dato ya está en uso.
 
 Ambos portales usan el mismo tema azul y ofrecen un selector persistente de modo claro/oscuro. El registro y el formulario de contacto enlazan a los términos y a la política de privacidad del proyecto; valoración también incluye estos enlaces.
 
@@ -109,17 +111,7 @@ Solo se admiten visitas para propiedades visibles, asignadas a un propietario y 
 
 #### Cuentas de demostración
 
-En entornos de desarrollo, `DataInitializer` crea estas cuentas si no existen:
-
-| Rol | Usuario | Contraseña |
-| --- | --- | --- |
-| Administrador | `admin` | `admin123` |
-| Propietario | `propietario` | `propietario123` |
-| Cliente | `cliente` | `cliente123` |
-
-Son credenciales de demostración. Antes de desplegar, reemplázalas por cuentas seguras y elimina o desactiva las credenciales por defecto. El usuario demo `propietario` conserva una compatibilidad temporal: si no tiene propiedades asignadas, su lista puede mostrar todas las propiedades, pero no puede modificarlas sin una asignación real. No uses ese fallback en producción.
-
-El inicializador de datos está desactivado cuando se activa el perfil `prod` (`SPRING_PROFILES_ACTIVE=prod`), por lo que las cuentas demo no se crean en producción. Antes de iniciar ese entorno, provisiona de forma segura una cuenta `ADMIN` con contraseña BCrypt en la base MongoDB de producción. No copies las contraseñas demo ni secretos al repositorio.
+Por defecto no se crean cuentas de demostración. `DataInitializer` solo se activa si se solicita explícitamente el perfil `demo` (y no `prod`); no actives ese perfil al conectarte a Atlas ni en producción. Si alguna ejecución anterior ya creó cuentas demo, eliminarlas de Atlas requiere una acción manual después de verificar que no tengan propiedades o visitas asociadas. Antes de desplegar, provisiona de forma segura las cuentas reales necesarias con contraseñas BCrypt.
 
 ## Despliegue
 
@@ -128,7 +120,7 @@ La aplicación requiere Java 21 y MongoDB. Para publicarla, conecta el repositor
 | Variable | Requerida | Uso |
 | --- | --- | --- |
 | `MONGODB_URI` | Sí | URI de MongoDB Atlas o de otra base accesible desde el servidor. |
-| `SPRING_PROFILES_ACTIVE` | Sí | Usa `prod` para desactivar las cuentas de demostración. |
+| `SPRING_PROFILES_ACTIVE` | Sí | Usa `prod`; las cuentas demo solo se crean con el perfil explícito `demo`. |
 | `GROQ_API_KEY` | No | Activa la API de chat; si se omite, el chat no se registra. |
 
 En MongoDB Atlas, crea una base de producción separada, crea un usuario de base de datos con permisos mínimos y permite conexiones entrantes desde el proveedor de hosting. No uses `localhost` como URI de MongoDB desplegada: apuntaría al propio servidor. La URI contiene credenciales; guárdala solo como secreto del proveedor.

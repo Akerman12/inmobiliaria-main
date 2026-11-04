@@ -15,7 +15,14 @@ public interface UsuarioRepository extends MongoRepository<Usuario, String> {
 
     boolean existsByEmail(String email);
 
+    boolean existsByCelularNormalizado(String celularNormalizado);
+
+    boolean existsByCelularRegex(String celularRegex);
+
+    boolean existsByCelularNormalizadoAndUsernameNot(String celularNormalizado, String username);
+
+    boolean existsByCelularRegexAndUsernameNot(String celularRegex, String username);
+
     java.util.List<Usuario> findByRolAndEnabledTrue(String rol);
 }
-
 

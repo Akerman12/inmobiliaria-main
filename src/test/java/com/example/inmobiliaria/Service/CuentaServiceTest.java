@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 
 import java.util.List;
 import java.util.Optional;
@@ -63,6 +64,38 @@ class CuentaServiceTest {
                         "clave-segura", "CLIENTE"));
 
         assertEquals(HttpStatus.CONFLICT, error.getStatusCode());
+        assertEquals("Este correo ya está en uso. Prueba con otro.", error.getReason());
+    }
+
+    @Test
+    void rechazaUnCelularYaRegistradoAunqueTengaFormatoDiferente() {
+        when(usuarioRepository.existsByCelularRegex("^\\D*5\\D*7\\D*3\\D*0\\D*0\\D*1\\D*2\\D*3\\D*4\\D*5\\D*6\\D*7\\D*$"))
+                .thenReturn(true);
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> cuentaService.crearCuenta(
+                        "Ana Pérez", "nueva@ejemplo.com", "+57 300 123 4567",
+                        "clave-segura", "CLIENTE"));
+
+        assertEquals(HttpStatus.CONFLICT, error.getStatusCode());
+        assertEquals("Este número de celular ya está en uso. Prueba con otro.", error.getReason());
+    }
+
+    @Test
+    void permiteRepetirNombreYContrasenaConCorreoYCelularDistintos() {
+        when(passwordEncoder.encode("clave-segura")).thenReturn("hash-seguro");
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
+
+        Usuario primero = cuentaService.crearCuenta(
+                "Ana Pérez", "primera@ejemplo.com", "+57 300 123 4567", "clave-segura", "CLIENTE");
+        Usuario segundo = cuentaService.crearCuenta(
+                "Ana Pérez", "segunda@ejemplo.com", "+57 300 765 4321", "clave-segura", "CLIENTE");
+
+        assertEquals(primero.getNombre(), segundo.getNombre());
+        assertEquals(primero.getPassword(), segundo.getPassword());
+        assertEquals("573001234567", primero.getCelularNormalizado());
+        assertEquals("573007654321", segundo.getCelularNormalizado());
+        verify(usuarioRepository, times(2)).save(any(Usuario.class));
     }
 
     @Test
@@ -112,6 +145,22 @@ class CuentaServiceTest {
         assertEquals("Ana Pérez", actualizado.getNombre());
         assertEquals("+57 300 123 4567", actualizado.getCelular());
         verify(usuarioRepository).save(usuario);
+    }
+
+    @Test
+    void rechazaCambiarPerfilAUnCelularDeOtraCuenta() {
+        Usuario usuario = new Usuario();
+        usuario.setUsername("persona@ejemplo.com");
+        when(usuarioRepository.findByUsername("persona@ejemplo.com")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.existsByCelularNormalizadoAndUsernameNot(
+                "573001234567", "persona@ejemplo.com")).thenReturn(true);
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> cuentaService.actualizarPerfil(
+                        "persona@ejemplo.com", "Ana Pérez", "+57 300 123 4567"));
+
+        assertEquals(HttpStatus.CONFLICT, error.getStatusCode());
+        assertEquals("Este número de celular ya está en uso. Prueba con otro.", error.getReason());
     }
 
     @Test

@@ -227,8 +227,8 @@
     async function cargarDashboard() {
       try {
         const [resProp, resContactos] = await Promise.all([
-          fetch('http://localhost:8080/api/propiedades'),
-          fetch('http://localhost:8080/api/contacto')
+          fetch('/api/propiedades'),
+          fetch('/api/contacto')
         ]);
         const propiedades = await resProp.json();
         const contactos   = await resContactos.json();
@@ -252,7 +252,7 @@
           <tr>
             <td>
               <div style="display:flex;align-items:center;gap:12px;">
-                <img src="${p.imagenId ? `http://localhost:8080/api/imagenes/${p.imagenId}` : '/img/default.jpg'}" 
+                <img src="${Array.isArray(p.imagenes) && p.imagenes.length > 0 ? p.imagenes[0] : '/img/default.jpg'}"
                      alt="${p.titulo}" class="table-img">
                 <div>
                   <div class="table-property-name">${p.titulo}</div>

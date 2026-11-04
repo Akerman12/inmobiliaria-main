@@ -33,14 +33,14 @@
         Correo o contraseña incorrectos.
       </div>
 
-      <form action="/login" method="post" class="login-form">
+      <form action="/login" method="post" class="login-form" autocomplete="off">
         <input type="hidden" name="adminLogin" value="true">
         <div class="form-group">
           <label class="form-label" for="username">
             <span class="material-symbols-rounded" style="font-size:1.6rem;vertical-align:middle;">person</span>
             Correo o usuario
           </label>
-          <input type="text" id="username" name="username" class="form-control" placeholder="Ingresa tu correo o usuario" required autocomplete="username">
+          <input type="text" id="username" name="username" class="form-control" placeholder="Ingresa tu correo o usuario" required autocomplete="off">
         </div>
 
         <div class="form-group" style="position:relative;">
@@ -48,7 +48,7 @@
             <span class="material-symbols-rounded" style="font-size:1.6rem;vertical-align:middle;">lock</span>
             Contraseña
           </label>
-          <input type="password" id="password" name="password" class="form-control" placeholder="Ingresa tu contraseña" required autocomplete="current-password" style="padding-right:48px;">
+          <input type="password" id="password" name="password" class="form-control" placeholder="Ingresa tu contraseña" required autocomplete="off" style="padding-right:48px;">
           <button type="button" id="togglePassword" style="position:absolute;right:14px;bottom:13px;background:none;border:none;cursor:pointer;color:var(--neutral-60);display:flex;">
             <span class="material-symbols-rounded" id="eyeIcon" style="font-size:2rem;">visibility</span>
           </button>

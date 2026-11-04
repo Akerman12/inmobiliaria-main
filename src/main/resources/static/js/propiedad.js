@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   try {
-    const res = await fetch(`http://localhost:8080/api/propiedades/${id}`);
+    const res = await fetch(`/api/propiedades/${id}`);
     if (!res.ok) throw new Error('Propiedad no encontrada');
     const p = await res.json();
     const enProceso = (p.estadoComercial || '').toUpperCase() === 'EN_PROCESO';

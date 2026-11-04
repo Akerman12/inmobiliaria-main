@@ -23,9 +23,10 @@ propietarios y mensajes desde un panel protegido, que tambien incluye una
 herramienta para estimar precios. La API de chat es una capacidad tecnica del
 backend y no una funcion visible para los visitantes.
 
-La aplicacion se ejecuta en el puerto `8080` y usa MongoDB en `localhost:27017`
-por defecto. La variable `MONGODB_URI` permite reemplazar esa conexion, por
-ejemplo para usar una instancia administrada en produccion.
+La aplicacion se ejecuta en el puerto `8080` y requiere una URI de MongoDB
+mediante `MONGODB_URI`. No utiliza `localhost` como conexion de respaldo: si
+falta la URI, el arranque falla en vez de conectarse silenciosamente a Compass
+o a otra base local.
 
 ## 2. Como inicia la aplicacion
 
@@ -381,7 +382,14 @@ actual y almacena la nueva con BCrypt.
 En el registro, `POST /api/cuenta/registro` solo admite los roles `CLIENTE` y
 `PROPIETARIO`; el cliente no puede crear una cuenta administradora. El
 formulario valida el nombre y el celular antes de enviarlos y el servicio
-repite las comprobaciones en el servidor.
+repite las comprobaciones en el servidor. Los nombres y contraseñas no son
+únicos. El correo y el celular sí: el correo se compara sin distinguir
+mayúsculas/minúsculas y el celular se normaliza a dígitos, ignorando espacios,
+guiones y otros separadores. Si alguno ya pertenece a otra cuenta, el servidor
+responde `409 Conflict` con un mensaje específico para ese campo. La unicidad
+del celular se protege además con el índice sparse único
+`celular_normalizado_unique_idx`; la comprobación por patrón también detecta
+celulares existentes que se guardaron antes con formato visual.
 
 ### Tema y textos legales
 
@@ -395,17 +403,18 @@ aceptar la casilla. La página de valoración expone los enlaces en su pie.
 
 ### Usuario administrador inicial
 
-`DataInitializer` se ejecuta al iniciar la aplicacion en perfiles distintos de
-`prod`. Si no existe `admin`, crea uno y codifica su contrasena:
+`DataInitializer` solo se ejecuta cuando se activa explicitamente el perfil
+`demo` fuera de `prod`. Si no existe `admin`, crea uno y codifica su contrasena:
 
 ```java
 admin.setPassword(passwordEncoder.encode("admin123"));
 ```
 
-La clase tiene `@Profile("!prod")`, por lo que las cuentas de demostracion no
-se crean en produccion. Para el perfil `prod`, provisiona una cuenta `ADMIN`
-segura directamente en la base de datos con una contrasena BCrypt antes de
-iniciar el servicio. Nunca publiques las contrasenas de demostracion.
+La clase tiene `@Profile("demo & !prod")`, por lo que las cuentas demo no se
+crean en ejecuciones normales ni en produccion. No actives ese perfil al conectarte a
+Atlas. Provisiona las cuentas reales directamente en Atlas con contrasenas
+BCrypt. Cuentas demo que ya existan deben eliminarse manualmente despues de
+verificar que no tengan propiedades o visitas asociadas.
 
 ## 10. Modelo predictivo con Weka
 
@@ -769,17 +778,10 @@ La administracion usa `/admin/login.html`; clientes y propietarios usan
 `CustomUserDetailsService`; por eso la ruta de destino depende del valor real de
 `Usuario.rol`, no de la opcion visual del formulario.
 
-`DataInitializer` crea las siguientes cuentas solo si no existen:
-
-| Rol | Usuario | Contrasena de demostracion |
-| --- | --- | --- |
-| `ADMIN` | `admin` | `admin123` |
-| `PROPIETARIO` | `propietario` | `propietario123` |
-| `CLIENTE` | `cliente` | `cliente123` |
-
-Estas credenciales son exclusivamente para desarrollo. Antes de publicar la
-aplicacion hay que sustituirlas y no habilitar cuentas con contrasenas
-conocidas.
+Por defecto no se crean cuentas de demostracion. `DataInitializer` solo corre
+con el perfil opcional `demo` y no corre si `prod` tambien esta activo; nunca lo actives en Atlas o produccion. Si una
+ejecucion anterior ya creo cuentas demo, el codigo no las elimina: revisa sus
+relaciones y borralas manualmente de Atlas si corresponde.
 
 ### Asignacion de una propiedad
 
@@ -898,22 +900,78 @@ catalogo de solicitudes y no admite nuevos contactos ni visitas.
 
 ## 17. Configuracion y despliegue
 
-`src/main/resources/application.properties` usa una URI configurable:
+`src/main/resources/application.properties` requiere una URI configurable:
 
 ```properties
-spring.data.mongodb.uri=${MONGODB_URI:mongodb://localhost:27017/bienesraices}
+spring.data.mongodb.uri=${MONGODB_URI}
 ```
 
-En local, si `MONGODB_URI` no existe, se conserva MongoDB en
-`localhost:27017`. Para desplegar, configura `MONGODB_URI` como secreto del
-proveedor de hosting y apunta a una instancia remota, como MongoDB Atlas. No
-uses una URI con credenciales en el repositorio. La base debe ser accesible
-desde la red del proveedor y conservar GridFS, que almacena las imagenes de
-propiedades.
+Configura `MONGODB_URI` en `.env.local` para desarrollo o como secreto del
+proveedor de hosting para produccion. Si la variable no existe, el arranque
+falla en lugar de conectarse silenciosamente a `localhost`. No uses una URI con
+credenciales en el repositorio. La base debe ser accesible desde la red del
+proveedor y conservar GridFS, que almacena las imagenes de propiedades.
+
+El frontend debe invocar la API con rutas del mismo origen, por ejemplo
+`/api/propiedades/visibles`, no con URLs fijas a `localhost`: en Render,
+`localhost` seria el navegador del visitante, no el servidor desplegado.
+
+Para que VS Code use el mismo Atlas, Spring Boot importa opcionalmente
+`.env.local` desde la raiz del proyecto. Crea ese archivo local con
+`MONGODB_URI=<URI de Atlas>`; `.gitignore` lo excluye del repositorio. Reinicia
+la sesion Java despues de cambiarlo. Si el archivo no existe, el arranque falla
+en vez de usar `localhost`. No guardes la URI en `launch.json`,
+`application.properties` ni en un commit.
+
+Conectar ambas aplicaciones a Atlas no copia los documentos que ya estaban en
+MongoDB local. Para migrar propiedades, testimonios, contactos e imagenes de
+GridFS sin reemplazar las cuentas que ya existen en Atlas, usa MongoDB Database
+Tools. Si el servidor local y Atlas tienen versiones diferentes, evita
+restaurar directamente el archivo `mongodump`: Database Tools puede advertir
+que esa combinacion de versiones no esta soportada. Canonical Extended JSON
+conserva los tipos BSON y permite transferir los documentos entre versiones:
+
+```powershell
+$atlasUri = "mongodb+srv://USUARIO_ATLAS@CLUSTER_HOST/bienesraices?retryWrites=true&w=majority"
+$respaldoAtlas = Join-Path $env:USERPROFILE 'bienesraices-atlas-before-migration.archive.gz'
+mongodump --uri=$atlasUri --password --db=bienesraices --archive=$respaldoAtlas --gzip
+
+$carpetaExport = Join-Path $env:USERPROFILE 'bienesraices-export'
+New-Item -ItemType Directory -Path $carpetaExport -Force | Out-Null
+$colecciones = @('propiedades', 'testimonios', 'contactos', 'imagenesPropiedades.files', 'imagenesPropiedades.chunks')
+foreach ($coleccion in $colecciones) {
+    $archivo = Join-Path $carpetaExport ($coleccion + '.json')
+    mongoexport --uri="mongodb://localhost:27017/bienesraices" --db=bienesraices --collection=$coleccion --jsonFormat=canonical --out=$archivo
+    if ($LASTEXITCODE -ne 0) { throw "Error al exportar $coleccion" }
+}
+
+foreach ($coleccion in $colecciones) {
+    $archivo = Join-Path $carpetaExport ($coleccion + '.json')
+    mongoimport --uri=$atlasUri --password --db=bienesraices --collection=$coleccion --mode=insert --stopOnError --maintainInsertionOrder --file=$archivo
+    if ($LASTEXITCODE -ne 0) { throw "Error al importar $coleccion; detente y revisa Atlas antes de reintentar" }
+}
+```
+
+Sustituye `USUARIO_ATLAS` y `CLUSTER_HOST` por los datos de Atlas, sin incluir
+la contrasena. `--password` la solicita de forma interactiva en cada comando
+que se conecta a Atlas. El respaldo previo y los JSON contienen datos personales:
+guardalos fuera del repositorio. La exportacion incluye deliberadamente GridFS
+(`imagenesPropiedades.files` y `.chunks`) y excluye `usuarios` para conservar las
+cuentas existentes, y `visitas` porque guardan IDs de usuarios que podrian no
+existir en Atlas. `--mode=insert` no sobrescribe documentos existentes; si hay
+IDs duplicados, detente y revisa el resultado antes de reintentar. No uses
+`--drop`.
+
+Las propiedades conservan su `propietarioId` local. Despues de migrar, asigna
+cada propiedad a la cuenta correcta desde **Admin → Propiedades** si su ID no
+corresponde a un propietario existente en Atlas. Las visitas historicas se
+pueden migrar despues de mapear sus IDs de cliente y propietario. Conserva los
+respaldos hasta verificar propiedades, testimonios e imagenes en el sitio
+desplegado; despues, eliminalos de forma segura.
 
 En produccion activa `SPRING_PROFILES_ACTIVE=prod`. `DataInitializer` usa
-`@Profile("!prod")`, por lo que las cuentas demo no se insertan con ese perfil.
-Antes de arrancar la aplicacion, crea de manera segura una cuenta `ADMIN`
+`@Profile("demo & !prod")`, por lo que las cuentas demo solo se insertan al activar
+deliberadamente ese perfil. Antes de arrancar la aplicacion, crea de manera segura una cuenta `ADMIN`
 habilitada en la base de produccion con una contrasena BCrypt. Las cuentas
 publicas de registro solo pueden obtener los roles `CLIENTE` y `PROPIETARIO`.
 

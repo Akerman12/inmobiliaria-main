@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   try {
-    const res = await fetch(`http://localhost:8080/api/propiedades/${id}`);
+    const res = await fetch(`/api/propiedades/${id}`);
     if (!res.ok) throw new Error('No encontrado');
     const p = await res.json();
 
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     archivos.forEach((file) => formData.append('imagenes', file));
 
     try {
-      const res = await fetch(`http://localhost:8080/api/propiedades/${id}`, {
+      const res = await fetch(`/api/propiedades/${id}`, {
         method: 'PUT',
         body: formData
       });

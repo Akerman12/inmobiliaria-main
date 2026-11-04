@@ -9,10 +9,10 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
- * Inicializa datos de demostración fuera del perfil de producción.
+ * Inicializa datos de demostración solo cuando se activa explícitamente el perfil demo.
  */
 @Configuration
-@Profile("!prod")
+@Profile("demo & !prod")
 public class DataInitializer {
 
     private final UsuarioRepository usuarioRepository;
@@ -50,7 +50,6 @@ public class DataInitializer {
                 
                 System.out.println("✓ Usuario administrador creado exitosamente");
                 System.out.println("  Username: admin");
-                System.out.println("  Password: admin123");
                 System.out.println("  Email: admin@inmobiliaria.com");
                 System.out.println("===========================================");
                 System.out.println("");
@@ -72,7 +71,6 @@ public class DataInitializer {
 
                 System.out.println("✓ Usuario propietario creado exitosamente");
                 System.out.println("  Username: propietario");
-                System.out.println("  Password: propietario123");
             }
 
             if (!usuarioRepository.existsByUsername("cliente")) {
@@ -87,7 +85,6 @@ public class DataInitializer {
 
                 System.out.println("✓ Usuario cliente creado exitosamente");
                 System.out.println("  Username: cliente");
-                System.out.println("  Password: cliente123");
             }
         };
     }

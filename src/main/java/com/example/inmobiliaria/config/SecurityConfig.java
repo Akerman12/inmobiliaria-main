@@ -85,6 +85,8 @@ public class SecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/api/v2/chat/salud", "GET")).permitAll()
 
                     .requestMatchers(HttpMethod.GET, "/api/propiedades/**", "/api/imagenes/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/testimonios/visibles").permitAll()
+                    .requestMatchers("/api/testimonios/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.POST, "/api/contacto").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/propiedades/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.PUT, "/api/propiedades/**").hasRole("ADMIN")

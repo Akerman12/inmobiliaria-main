@@ -9,6 +9,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const registerName = document.getElementById('register-name');
   const registerPhone = document.getElementById('register-phone');
   const params = new URLSearchParams(window.location.search);
+  const loginPassword = document.getElementById('login-password');
+  const toggleLoginPassword = document.getElementById('toggleLoginPassword');
+
+  toggleLoginPassword.addEventListener('click', () => {
+    const mostrar = loginPassword.type === 'password';
+    loginPassword.type = mostrar ? 'text' : 'password';
+    toggleLoginPassword.setAttribute('aria-pressed', String(mostrar));
+    toggleLoginPassword.setAttribute('aria-label', mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña');
+    toggleLoginPassword.querySelector('.material-symbols-rounded').textContent =
+      mostrar ? 'visibility_off' : 'visibility';
+  });
 
   function showMessage(text, isError = false) {
     message.textContent = text;

@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Local-only secrets such as the Atlas URI used by Spring Boot
+.env.local

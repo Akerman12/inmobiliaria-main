@@ -297,8 +297,8 @@
     async function cargarContactos() {
       try {
         const [resC, resP] = await Promise.all([
-          fetch('http://localhost:8080/api/contacto'),
-          fetch('http://localhost:8080/api/propiedades')
+          fetch('/api/contacto'),
+          fetch('/api/propiedades')
         ]);
         todosContactos = await resC.json();
         const propiedades = await resP.json();
@@ -601,7 +601,7 @@
     // ═══════════════════════════════════════════════════════════
     async function toggleAtendido(id) {
       try {
-        const res = await fetch(`http://localhost:8080/api/contacto/${id}/atendido`, { method: 'PATCH' });
+        const res = await fetch(`/api/contacto/${id}/atendido`, { method: 'PATCH' });
         if (!res.ok) throw new Error();
         const idx = todosContactos.findIndex(c => c.id === id);
         if (idx !== -1) todosContactos[idx].atendido = !todosContactos[idx].atendido;
@@ -615,7 +615,7 @@
     async function eliminarContacto(id) {
       if (!confirm('¿Seguro que deseas eliminar este mensaje? Esta acción no se puede deshacer.')) return;
       try {
-        const res = await fetch(`http://localhost:8080/api/contacto/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/contacto/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error();
         todosContactos = todosContactos.filter(c => c.id !== id);
         listaFiltrada  = listaFiltrada.filter(c => c.id !== id);

@@ -53,7 +53,12 @@ public class CuentaService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona un tipo de cuenta válido.");
         }
         if (usuarioRepository.existsByUsername(emailLimpio) || usuarioRepository.existsByEmail(emailLimpio)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una cuenta con ese correo.");
+            throw correoEnUso();
+        }
+        String celularNormalizado = normalizarCelular(celularLimpio);
+        if (usuarioRepository.existsByCelularNormalizado(celularNormalizado)
+                || usuarioRepository.existsByCelularRegex(patronCelular(celularNormalizado))) {
+            throw celularEnUso();
         }
 
         Usuario usuario = new Usuario();
@@ -61,6 +66,7 @@ public class CuentaService {
         usuario.setUsername(emailLimpio);
         usuario.setEmail(emailLimpio);
         usuario.setCelular(celularLimpio);
+        usuario.setCelularNormalizado(celularNormalizado);
         usuario.setPassword(passwordEncoder.encode(password));
         usuario.setRol(rol);
         usuario.setEnabled(true);
@@ -69,7 +75,10 @@ public class CuentaService {
         try {
             return usuarioRepository.save(usuario);
         } catch (DuplicateKeyException exception) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una cuenta con ese correo.", exception);
+            if (esDuplicadoCelular(exception)) {
+                throw celularEnUso(exception);
+            }
+            throw correoEnUso(exception);
         }
     }
 
@@ -89,9 +98,20 @@ public class CuentaService {
         }
 
         Usuario usuario = buscarPorUsername(username);
+        String celularNormalizado = normalizarCelular(celularLimpio);
+        if (usuarioRepository.existsByCelularNormalizadoAndUsernameNot(celularNormalizado, username)
+                || usuarioRepository.existsByCelularRegexAndUsernameNot(
+                        patronCelular(celularNormalizado), username)) {
+            throw celularEnUso();
+        }
         usuario.setNombre(nombreLimpio);
         usuario.setCelular(celularLimpio);
-        return usuarioRepository.save(usuario);
+        usuario.setCelularNormalizado(celularNormalizado);
+        try {
+            return usuarioRepository.save(usuario);
+        } catch (DuplicateKeyException exception) {
+            throw celularEnUso(exception);
+        }
     }
 
     public void cambiarPassword(String username, String passwordActual, String passwordNueva) {
@@ -134,5 +154,37 @@ public class CuentaService {
         long digitos = celular.chars().filter(Character::isDigit).count();
         return celular.length() <= 30 && CELULAR_VALIDO.matcher(celular).matches()
                 && digitos >= 7 && digitos <= 15;
+    }
+
+    private String normalizarCelular(String celular) {
+        return celular.replaceAll("\\D", "");
+    }
+
+    private String patronCelular(String celularNormalizado) {
+        return "^\\D*" + String.join("\\D*", celularNormalizado.split("")) + "\\D*$";
+    }
+
+    private boolean esDuplicadoCelular(DuplicateKeyException exception) {
+        return exception.getMessage() != null
+                && exception.getMessage().contains("celular_normalizado_unique_idx");
+    }
+
+    private ResponseStatusException correoEnUso() {
+        return new ResponseStatusException(HttpStatus.CONFLICT, "Este correo ya está en uso. Prueba con otro.");
+    }
+
+    private ResponseStatusException correoEnUso(DuplicateKeyException cause) {
+        return new ResponseStatusException(
+                HttpStatus.CONFLICT, "Este correo ya está en uso. Prueba con otro.", cause);
+    }
+
+    private ResponseStatusException celularEnUso() {
+        return new ResponseStatusException(
+                HttpStatus.CONFLICT, "Este número de celular ya está en uso. Prueba con otro.");
+    }
+
+    private ResponseStatusException celularEnUso(DuplicateKeyException cause) {
+        return new ResponseStatusException(
+                HttpStatus.CONFLICT, "Este número de celular ya está en uso. Prueba con otro.", cause);
     }
 }
