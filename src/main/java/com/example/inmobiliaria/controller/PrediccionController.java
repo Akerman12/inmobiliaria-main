@@ -18,6 +18,7 @@ public class PrediccionController {
 
     private LinearRegression modeloEntrenado;
     private Instances estructuraDataset;
+    private double errorPromedioAbsoluto = Double.NaN;
 
     @PostConstruct
     public void cargarModelo() {
@@ -41,6 +42,7 @@ public class PrediccionController {
             estructuraDataset = source.getDataSet();
             // El atributo clase es el último (precio)
             estructuraDataset.setClassIndex(estructuraDataset.numAttributes() - 1);
+            calcularErrorPromedioAbsoluto();
 
             System.out.println("✓ Modelo de predicción de precios cargado correctamente");
             System.out.println("  Atributos: " + estructuraDataset.numAttributes());
@@ -52,14 +54,32 @@ public class PrediccionController {
         }
     }
 
+    private void calcularErrorPromedioAbsoluto() throws Exception {
+        if (estructuraDataset.numInstances() == 0) {
+            throw new IllegalStateException("El conjunto de datos de entrenamiento está vacío.");
+        }
+
+        double errorTotal = 0;
+        for (int i = 0; i < estructuraDataset.numInstances(); i++) {
+            Instance inmueble = estructuraDataset.instance(i);
+            double precioReal = inmueble.classValue();
+            double precioEstimado = modeloEntrenado.classifyInstance(inmueble);
+            if (!Double.isFinite(precioReal) || !Double.isFinite(precioEstimado)) {
+                throw new IllegalStateException("El modelo produjo un valor no finito al calcular su error.");
+            }
+            errorTotal += Math.abs(precioReal - precioEstimado);
+        }
+        errorPromedioAbsoluto = errorTotal / estructuraDataset.numInstances();
+    }
+
     @PostMapping("/precio")
     public ResponseEntity<Map<String, Object>> predecirPrecio(
             @RequestBody Map<String, Object> datos) {
 
         Map<String, Object> respuesta = new HashMap<>();
 
-        if (modeloEntrenado == null || estructuraDataset == null) {
-            respuesta.put("error", "El modelo no está disponible.");
+        if (modeloEntrenado == null || estructuraDataset == null || !Double.isFinite(errorPromedioAbsoluto)) {
+            respuesta.put("error", "El modelo o su margen de error no está disponible.");
             return ResponseEntity.status(503).body(respuesta);
         }
 
@@ -98,6 +118,8 @@ public class PrediccionController {
             respuesta.put("precioEstimado",   precioRedondeado);
             respuesta.put("precioFormateado", precioFormateado);
             respuesta.put("mensaje", "Precio estimado por regresión lineal");
+            respuesta.put("errorPromedioAbsoluto", Math.round(errorPromedioAbsoluto));
+            respuesta.put("cantidadDatosEntrenamiento", estructuraDataset.numInstances());
             respuesta.put("inputs", Map.of(
                 "habitaciones", habitaciones, "wc", wc,
                 "estacionamiento", estacionamiento,
@@ -116,7 +138,8 @@ public class PrediccionController {
     @GetMapping("/estado")
     public ResponseEntity<Map<String, Object>> estado() {
         Map<String, Object> resp = new HashMap<>();
-        resp.put("modeloCargado", modeloEntrenado != null && estructuraDataset != null);
+        resp.put("modeloCargado", modeloEntrenado != null && estructuraDataset != null
+                && Double.isFinite(errorPromedioAbsoluto));
         return ResponseEntity.ok(resp);
     }
 }

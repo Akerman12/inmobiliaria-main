@@ -2,7 +2,13 @@ document.addEventListener('DOMContentLoaded', function () {
   const params = new URLSearchParams(window.location.search);
   const error  = params.get('error');
 
-  if (error === 'true') {
+  if (error === 'role') {
+    const errorDiv = document.getElementById('error-message');
+    if (errorDiv) {
+      errorDiv.textContent = 'Correo o contraseña inválidos.';
+      errorDiv.classList.add('show');
+    }
+  } else if (error === 'true') {
     const errorDiv = document.getElementById('error-message');
     if (errorDiv) errorDiv.classList.add('show');
   }

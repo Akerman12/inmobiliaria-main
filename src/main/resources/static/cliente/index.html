@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="/js/tema.js"></script>
   <title>Mi portal | Clientes</title>
   <link rel="shortcut icon" href="/img/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,23 +52,26 @@
     @media (max-width: 880px) { .cliente-shell { grid-template-columns: 1fr; } .cards { grid-template-columns: 1fr; } }
     @media (max-width: 560px) { .cliente-main { padding:16px; } .visit-dialog-form { padding:18px; } .visit-request-top { flex-direction:column; } }
   </style>
+  <link rel="stylesheet" href="/css/identidad-tema.css">
+  <link rel="stylesheet" href="/css/portales.css">
 </head>
-<body>
+<body class="portal-body">
   <div class="cliente-shell">
     <aside class="cliente-sidebar">
-      <div class="brand">
-        <img src="/img/logo.svg" alt="logo" width="40" height="40" style="border-radius: 12px;">
+      <a class="brand" href="/">
+        <img src="/img/logo.svg" alt="" width="40" height="40" style="border-radius: 12px;">
         <div>
           <div>BienesRaíces</div>
           <small style="opacity:.78;">Portal cliente</small>
         </div>
-      </div>
+      </a>
 
       <nav class="nav">
-        <a href="/cliente/index.html" class="active"><span class="material-symbols-rounded">dashboard</span> Dashboard</a>
-        <a href="/cliente/index.html"><span class="material-symbols-rounded">home</span> Propiedades</a>
-        <a href="/cliente/index.html"><span class="material-symbols-rounded">favorite</span> Favoritos</a>
-        <a href="#panel-visitas"><span class="material-symbols-rounded">calendar_month</span> Visitas</a>
+        <a href="#panel-dashboard" class="active" data-client-panel="panel-dashboard"><span class="material-symbols-rounded">dashboard</span> Resumen</a>
+        <a href="#panel-propiedades" data-client-panel="panel-propiedades"><span class="material-symbols-rounded">home</span> Propiedades</a>
+        <a href="#panel-favoritos" data-client-panel="panel-favoritos"><span class="material-symbols-rounded">favorite</span> Favoritos</a>
+        <a href="#panel-visitas" data-client-panel="panel-visitas"><span class="material-symbols-rounded">calendar_month</span> Mis visitas</a>
+        <a href="#panel-perfil" data-client-panel="panel-perfil"><span class="material-symbols-rounded">person</span> Mi perfil</a>
         <a href="/"><span class="material-symbols-rounded">open_in_new</span> Ver sitio</a>
       </nav>
 
@@ -80,36 +84,88 @@
     </aside>
 
     <main class="cliente-main">
-      <div class="hero">
-        <h1 style="margin:0 0 8px;">Encuentra tu próxima propiedad</h1>
-        <p style="margin:0; opacity:.92;">Explora opciones disponibles y agenda visitas sin salir del portal.</p>
-      </div>
+      <section id="panel-dashboard" class="client-panel is-visible">
+        <header class="portal-page-heading">
+          <div>
+            <span class="portal-eyebrow">Tu espacio personal</span>
+            <h1 id="saludoCliente">Bienvenido</h1>
+            <p>Encuentra tu próxima propiedad y sigue tus visitas desde un solo lugar.</p>
+          </div>
+          <a href="#panel-propiedades" data-open-client="panel-propiedades" class="btn btn-primary">
+            <span class="material-symbols-rounded">search</span>Explorar propiedades
+          </a>
+        </header>
 
-      <div class="cards">
-        <div class="card">
-          <div class="muted">Propiedades disponibles</div>
-          <h2 id="totalDisponibles">0</h2>
+        <div class="cards">
+          <article class="card portal-stat">
+            <span class="portal-stat-icon"><span class="material-symbols-rounded">home_work</span></span>
+            <div><div class="muted">Propiedades disponibles</div><h2 id="totalDisponibles">0</h2></div>
+          </article>
+          <article class="card portal-stat">
+            <span class="portal-stat-icon"><span class="material-symbols-rounded">event</span></span>
+            <div><div class="muted">Visitas activas</div><h2 id="totalVisitasProgramadas">0</h2></div>
+          </article>
+          <article class="card portal-stat">
+            <span class="portal-stat-icon"><span class="material-symbols-rounded">favorite</span></span>
+            <div><div class="muted">Tus favoritos</div><h2 id="totalFavoritos">0</h2></div>
+          </article>
         </div>
-        <div class="card">
-          <div class="muted">Visitas programadas</div>
-          <h2 id="totalVisitasProgramadas">0</h2>
-        </div>
-        <div class="card">
-          <div class="muted">Favoritos</div>
-          <h2>0</h2>
-        </div>
-      </div>
 
-      <div class="card" style="padding: 18px 20px 28px;">
-        <h3 style="margin:0 0 18px;">Propiedades destacadas</h3>
+        <div class="client-shortcuts">
+          <button type="button" class="card client-shortcut" data-open-client="panel-favoritos">
+            <span class="material-symbols-rounded">favorite</span><strong>Ver favoritos</strong><span>Consulta las propiedades que guardaste.</span>
+          </button>
+          <button type="button" class="card client-shortcut" data-open-client="panel-visitas">
+            <span class="material-symbols-rounded">calendar_month</span><strong>Seguir mis visitas</strong><span>Revisa las solicitudes y sus confirmaciones.</span>
+          </button>
+        </div>
+      </section>
+
+      <section id="panel-propiedades" class="client-panel" hidden>
+        <header class="portal-page-heading">
+          <div><span class="portal-eyebrow">Catálogo</span><h1>Propiedades disponibles</h1><p>Explora y solicita una visita a las opciones que te interesan.</p></div>
+        </header>
+        <div class="client-toolbar">
+          <label><span class="material-symbols-rounded">search</span><input id="buscarPropiedadesCliente" type="search" placeholder="Buscar por nombre o ciudad" aria-label="Buscar propiedades"></label>
+          <select id="filtroOperacionCliente" aria-label="Filtrar por operación">
+            <option value="TODAS">Todas las operaciones</option><option value="venta">En venta</option><option value="arriendo">En arriendo</option>
+          </select>
+        </div>
         <div id="listaPropiedades" class="propiedades"></div>
-      </div>
+      </section>
 
-      <section id="panel-visitas" class="card" style="margin-top:22px;">
-        <h2 style="margin:0 0 6px;color:#172433;">Mis visitas</h2>
-        <p class="muted" style="margin:0 0 16px;">Solicitudes y confirmaciones de recorridos</p>
-        <div id="listaVisitasCliente" class="visit-requests" aria-live="polite">
-          <p class="muted">Cargando visitas...</p>
+      <section id="panel-favoritos" class="client-panel" hidden>
+        <header class="portal-page-heading">
+          <div><span class="portal-eyebrow">Tu selección</span><h1>Propiedades favoritas</h1><p>Guarda opciones para volver a ellas fácilmente.</p></div>
+          <a href="/favoritos.html" class="btn btn-outline"><span class="material-symbols-rounded">open_in_new</span>Ver página de favoritos</a>
+        </header>
+        <div id="listaFavoritosCliente" class="propiedades" aria-live="polite"></div>
+      </section>
+
+      <section id="panel-visitas" class="client-panel" hidden>
+        <header class="portal-page-heading"><div><span class="portal-eyebrow">Agenda</span><h1>Mis visitas</h1><p>Consulta el estado de tus solicitudes de visita.</p></div></header>
+        <div id="listaVisitasCliente" class="visit-requests" aria-live="polite"><p class="muted">Cargando visitas...</p></div>
+      </section>
+
+      <section id="panel-perfil" class="client-panel" hidden>
+        <header class="portal-page-heading"><div><span class="portal-eyebrow">Cuenta</span><h1>Mi perfil</h1><p>Administra tus datos de contacto y seguridad.</p></div></header>
+        <div id="mensajePerfilCliente" class="portal-message" role="status" hidden></div>
+        <div class="portal-profile-grid">
+          <form id="formPerfilCliente" class="card portal-form">
+            <h2>Datos personales</h2>
+            <label>Nombre completo<input name="nombre" autocomplete="name" maxlength="100" required></label>
+            <label>Correo electrónico<input name="email" type="email" readonly aria-describedby="ayudaCorreoCliente"></label>
+            <small id="ayudaCorreoCliente">El correo se utiliza para iniciar sesión y no se cambia desde aquí.</small>
+            <label>Celular<input name="celular" type="tel" autocomplete="tel" maxlength="30" required></label>
+            <button type="submit" class="btn btn-primary"><span class="material-symbols-rounded">save</span>Guardar cambios</button>
+          </form>
+          <form id="formPasswordCliente" class="card portal-form">
+            <h2>Cambiar contraseña</h2>
+            <label>Contraseña actual<input name="passwordActual" type="password" autocomplete="current-password" required></label>
+            <label>Nueva contraseña<input name="passwordNueva" type="password" autocomplete="new-password" minlength="8" required></label>
+            <label>Confirmar nueva contraseña<input name="confirmarPassword" type="password" autocomplete="new-password" minlength="8" required></label>
+            <button type="submit" class="btn btn-outline"><span class="material-symbols-rounded">lock_reset</span>Actualizar contraseña</button>
+          </form>
         </div>
       </section>
     </main>
@@ -135,6 +191,8 @@
     </form>
   </dialog>
 
+  <script src="/js/favoritos.js"></script>
   <script src="/js/cliente.js"></script>
+  <script src="/js/portal-cuenta.js"></script>
 </body>
 </html>

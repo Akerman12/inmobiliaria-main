@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="/js/tema.js"></script>
   <title>Mi panel | Propietarios</title>
   <link rel="shortcut icon" href="/img/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -644,8 +645,10 @@
       .owner-panel, .availability-fill { animation: none; transition: none; }
     }
   </style>
+  <link rel="stylesheet" href="/css/identidad-tema.css">
+  <link rel="stylesheet" href="/css/portales.css">
 </head>
-<body class="admin-body">
+<body class="admin-body portal-body">
   <div class="propietario-shell">
     <aside class="propietario-sidebar">
       <div class="propietario-brand">
@@ -659,8 +662,10 @@
       <nav class="propietario-nav">
         <a href="#panel-dashboard" class="nav-panel-link active" data-panel="panel-dashboard"><span class="material-symbols-rounded">dashboard</span> Dashboard</a>
         <a href="#panel-propiedades" class="nav-panel-link" data-panel="panel-propiedades"><span class="material-symbols-rounded">home</span> Mis propiedades</a>
+        <a href="#panel-publicar" class="nav-panel-link" data-panel="panel-publicar"><span class="material-symbols-rounded">add_home</span> Publicar propiedad</a>
         <a href="#panel-visitas" class="nav-panel-link" data-panel="panel-visitas"><span class="material-symbols-rounded">event</span> Visitas</a>
         <a href="#panel-consultas" class="nav-panel-link" data-panel="panel-consultas"><span class="material-symbols-rounded">mail</span> Consultas <span id="consultasNavBadge" class="owner-nav-count" hidden>0</span></a>
+        <a href="#panel-perfil" class="nav-panel-link" data-panel="panel-perfil"><span class="material-symbols-rounded">person</span> Mi perfil</a>
         <a href="/"><span class="material-symbols-rounded">open_in_new</span> Ver sitio</a>
       </nav>
 
@@ -676,7 +681,7 @@
       <section id="panel-dashboard" class="owner-panel is-visible">
         <div class="owner-page-heading">
           <div class="page-header-info">
-            <h1>Mi panel</h1>
+        <h1 id="saludoPropietario">Mi panel</h1>
             <p>Resumen de tus inmuebles y su disponibilidad</p>
           </div>
           <div class="owner-current-date">
@@ -707,6 +712,14 @@
             <div>
               <div id="enProceso" class="stat-widget-value">0</div>
               <div class="stat-widget-label">En proceso</div>
+            </div>
+          </div>
+
+          <div class="stat-widget">
+            <div class="stat-widget-icon bg-blue"><span class="material-symbols-rounded">fact_check</span></div>
+            <div>
+              <div id="pendientesRevision" class="stat-widget-value">0</div>
+              <div class="stat-widget-label">En revisión</div>
             </div>
           </div>
 
@@ -782,6 +795,9 @@
         <div class="owner-panel-header">
           <h2>Mis propiedades</h2>
           <p>Gestiona el estado y revisa cada inmueble desde aquí.</p>
+          <button type="button" class="btn btn-primary" data-open-panel="panel-publicar">
+            <span class="material-symbols-rounded">add_home</span>Publicar propiedad
+          </button>
         </div>
 
         <div class="owner-surface">
@@ -796,6 +812,7 @@
             <input id="buscarPropiedades" class="owner-property-search" type="search" placeholder="Buscar por nombre o ciudad" aria-label="Buscar propiedades">
             <select id="filtroEstadoPropiedades" class="owner-property-filter" aria-label="Filtrar propiedades por estado">
               <option value="TODAS">Todos los estados</option>
+              <option value="REVISION">En revisión</option>
               <option value="DISPONIBLE">Disponibles</option>
               <option value="EN_PROCESO">En proceso</option>
             </select>
@@ -804,6 +821,37 @@
             <div class="owner-empty">Cargando propiedades...</div>
           </div>
         </div>
+      </section>
+
+      <section id="panel-publicar" class="owner-panel">
+        <div class="owner-panel-header">
+          <h2 id="tituloFormularioPropiedad">Publicar una propiedad</h2>
+          <p>Completa la información del inmueble. El equipo revisará el anuncio antes de publicarlo.</p>
+        </div>
+        <div id="mensajePublicacion" class="portal-message" role="status" hidden></div>
+        <form id="formPublicarPropiedad" class="owner-surface portal-listing-form" enctype="multipart/form-data">
+          <input type="hidden" name="id">
+          <div class="portal-form-grid">
+            <label class="portal-field-wide">Título del anuncio<input name="titulo" maxlength="150" required></label>
+            <label>Operación<select name="operacion" required><option value="venta">Venta</option><option value="arriendo">Arriendo</option></select></label>
+            <label>Tipo de inmueble<select name="tipo" required><option value="apartamento">Apartamento</option><option value="casa">Casa</option><option value="villa">Villa</option><option value="local">Local</option><option value="terreno">Terreno</option><option value="otro">Otro</option></select></label>
+            <label>Precio (COP)<input name="precio" type="number" min="1" step="1000" required></label>
+            <label>Área (m²)<input name="metrosCuadrados" type="number" min="1" step="0.1" required></label>
+            <label>Habitaciones<input name="habitaciones" type="number" min="0" max="30" value="0" required></label>
+            <label>Baños<input name="wc" type="number" min="0" max="30" value="0" required></label>
+            <label>Parqueaderos<input name="estacionamiento" type="number" min="0" max="30" value="0" required></label>
+            <label>Ciudad<input name="ciudad" maxlength="100" required></label>
+            <label>Barrio<input name="barrio" maxlength="100"></label>
+            <label class="portal-field-wide">Dirección<input name="direccion" maxlength="200" required></label>
+            <label class="portal-field-wide">Descripción<textarea name="descripcion" rows="5" maxlength="5000" required></textarea></label>
+            <label class="portal-field-wide">Fotos del inmueble<input name="imagenes" type="file" accept="image/jpeg,image/png,image/webp" multiple></label>
+          </div>
+          <p class="portal-form-hint">Adjunta de 1 a 4 fotos para un anuncio nuevo. Al corregir un anuncio puedes conservar las fotos actuales o reemplazarlas.</p>
+          <div class="portal-form-actions">
+            <button type="button" class="btn btn-outline" data-open-panel="panel-propiedades">Cancelar</button>
+            <button type="submit" class="btn btn-primary"><span class="material-symbols-rounded">send</span>Enviar a revisión</button>
+          </div>
+        </form>
       </section>
 
       <section id="panel-visitas" class="owner-panel">
@@ -858,9 +906,36 @@
           </div>
         </div>
       </section>
+
+      <section id="panel-perfil" class="owner-panel">
+        <div class="owner-panel-header">
+          <h2>Mi perfil</h2>
+          <p>Mantén actualizados tus datos y protege tu cuenta.</p>
+        </div>
+        <div id="mensajePerfilPropietario" class="portal-message" role="status" hidden></div>
+        <div class="portal-profile-grid">
+          <form id="formPerfilPropietario" class="owner-surface portal-form">
+            <h3>Datos personales</h3>
+            <label>Nombre completo<input name="nombre" autocomplete="name" maxlength="100" required></label>
+            <label>Correo electrónico<input name="email" type="email" readonly aria-describedby="ayudaCorreoPropietario"></label>
+            <small id="ayudaCorreoPropietario">El correo se utiliza para iniciar sesión y no se cambia desde aquí.</small>
+            <label>Celular<input name="celular" type="tel" autocomplete="tel" maxlength="30" required></label>
+            <button type="submit" class="btn btn-primary"><span class="material-symbols-rounded">save</span>Guardar cambios</button>
+          </form>
+          <form id="formPasswordPropietario" class="owner-surface portal-form">
+            <h3>Cambiar contraseña</h3>
+            <label>Contraseña actual<input name="passwordActual" type="password" autocomplete="current-password" required></label>
+            <label>Nueva contraseña<input name="passwordNueva" type="password" autocomplete="new-password" minlength="8" required></label>
+            <label>Confirmar nueva contraseña<input name="confirmarPassword" type="password" autocomplete="new-password" minlength="8" required></label>
+            <button type="submit" class="btn btn-outline"><span class="material-symbols-rounded">lock_reset</span>Actualizar contraseña</button>
+          </form>
+        </div>
+      </section>
     </main>
   </div>
 
+  <script src="/js/favoritos.js"></script>
   <script src="/js/propietario.js"></script>
+  <script src="/js/portal-cuenta.js"></script>
 </body>
 </html>

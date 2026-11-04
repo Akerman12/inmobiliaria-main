@@ -1,5 +1,25 @@
 document.addEventListener('DOMContentLoaded', function () {
 
+  const formDatosContacto = document.getElementById('formContacto');
+  if (formDatosContacto) {
+    fetch('/api/cuenta/perfil', { credentials: 'same-origin' })
+      .then(async response => {
+        if (response.status === 401) return null;
+        if (!response.ok) throw new Error('No se pudo cargar el perfil de la cuenta.');
+        return response.json();
+      })
+      .then(perfil => {
+        if (!perfil) return;
+        const nombre = formDatosContacto.querySelector('#nombre');
+        const correo = formDatosContacto.querySelector('#email');
+        const celular = formDatosContacto.querySelector('#telefono');
+        if (nombre && !nombre.value) nombre.value = perfil.nombre || '';
+        if (correo && !correo.value) correo.value = perfil.email || '';
+        if (celular && !celular.value) celular.value = perfil.celular || '';
+      })
+      .catch(error => console.error('Error al autocompletar el contacto:', error));
+  }
+
   // ─── CARGAR PROPIEDADES EN SELECT (formulario de contacto) ────────────────
     const selectPropiedad = document.getElementById('propiedad');
   if (selectPropiedad) {

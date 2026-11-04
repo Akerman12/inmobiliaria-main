@@ -1,0 +1,138 @@
+package com.example.inmobiliaria.Service;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
+
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.example.inmobiliaria.model.Usuario;
+import com.example.inmobiliaria.repository.UsuarioRepository;
+
+@Service
+public class CuentaService {
+
+    private static final Pattern NOMBRE_VALIDO = Pattern.compile("^[\\p{L}][\\p{L} '\\u2019.-]*$");
+    private static final Pattern CELULAR_VALIDO = Pattern.compile("^\\+?[0-9][0-9\\s().-]*$");
+
+    private final UsuarioRepository usuarioRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public CuentaService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
+        this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    public Usuario crearCuenta(String nombre, String email, String celular, String password, String tipoCuenta) {
+        String nombreLimpio = nombre == null ? "" : nombre.trim();
+        String emailLimpio = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        String celularLimpio = celular == null ? "" : celular.trim();
+        String rol = tipoCuenta == null ? "" : tipoCuenta.trim().toUpperCase(Locale.ROOT);
+
+        if (!esNombreValido(nombreLimpio)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ingresa un nombre válido.");
+        }
+        if (!emailLimpio.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || emailLimpio.length() > 254) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ingresa un correo electrónico válido.");
+        }
+        if (!esCelularValido(celularLimpio)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ingresa un número de celular válido.");
+        }
+        if (password == null || password.length() < 8
+                || password.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La contraseña debe tener al menos 8 caracteres y no superar el límite permitido.");
+        }
+        if (!rol.equals("CLIENTE") && !rol.equals("PROPIETARIO")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Selecciona un tipo de cuenta válido.");
+        }
+        if (usuarioRepository.existsByUsername(emailLimpio) || usuarioRepository.existsByEmail(emailLimpio)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una cuenta con ese correo.");
+        }
+
+        Usuario usuario = new Usuario();
+        usuario.setNombre(nombreLimpio);
+        usuario.setUsername(emailLimpio);
+        usuario.setEmail(emailLimpio);
+        usuario.setCelular(celularLimpio);
+        usuario.setPassword(passwordEncoder.encode(password));
+        usuario.setRol(rol);
+        usuario.setEnabled(true);
+        usuario.setFavoritos(List.of());
+
+        try {
+            return usuarioRepository.save(usuario);
+        } catch (DuplicateKeyException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe una cuenta con ese correo.", exception);
+        }
+    }
+
+    public Usuario buscarPorUsername(String username) {
+        return usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "La sesión no es válida."));
+    }
+
+    public Usuario actualizarPerfil(String username, String nombre, String celular) {
+        String nombreLimpio = nombre == null ? "" : nombre.trim();
+        String celularLimpio = celular == null ? "" : celular.trim();
+        if (!esNombreValido(nombreLimpio)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ingresa un nombre válido.");
+        }
+        if (!esCelularValido(celularLimpio)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ingresa un número de celular válido.");
+        }
+
+        Usuario usuario = buscarPorUsername(username);
+        usuario.setNombre(nombreLimpio);
+        usuario.setCelular(celularLimpio);
+        return usuarioRepository.save(usuario);
+    }
+
+    public void cambiarPassword(String username, String passwordActual, String passwordNueva) {
+        Usuario usuario = buscarPorUsername(username);
+        if (passwordActual == null || !passwordEncoder.matches(passwordActual, usuario.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contraseña actual no es correcta.");
+        }
+        if (passwordNueva == null || passwordNueva.length() < 8
+                || passwordNueva.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La nueva contraseña debe tener al menos 8 caracteres y no superar el límite permitido.");
+        }
+
+        usuario.setPassword(passwordEncoder.encode(passwordNueva));
+        usuarioRepository.save(usuario);
+    }
+
+    public List<String> obtenerFavoritos(String username) {
+        return new ArrayList<>(buscarPorUsername(username).getFavoritos());
+    }
+
+    public List<String> actualizarFavoritos(String username, List<String> ids) {
+        if (ids == null || ids.stream().anyMatch(id -> id == null || id.isBlank())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La lista de favoritos no es válida.");
+        }
+
+        List<String> favoritos = ids.stream().distinct().toList();
+        Usuario usuario = buscarPorUsername(username);
+        usuario.setFavoritos(favoritos);
+        return usuarioRepository.save(usuario).getFavoritos();
+    }
+
+    private boolean esNombreValido(String nombre) {
+        return nombre.length() >= 2 && nombre.length() <= 100
+                && NOMBRE_VALIDO.matcher(nombre).matches()
+                && nombre.codePoints().filter(Character::isLetter).count() >= 2;
+    }
+
+    private boolean esCelularValido(String celular) {
+        long digitos = celular.chars().filter(Character::isDigit).count();
+        return celular.length() <= 30 && CELULAR_VALIDO.matcher(celular).matches()
+                && digitos >= 7 && digitos <= 15;
+    }
+}

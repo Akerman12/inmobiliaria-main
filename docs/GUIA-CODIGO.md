@@ -23,7 +23,9 @@ propietarios y mensajes desde un panel protegido, que tambien incluye una
 herramienta para estimar precios. La API de chat es una capacidad tecnica del
 backend y no una funcion visible para los visitantes.
 
-La aplicacion se ejecuta en el puerto `8080` y usa MongoDB en `localhost:27017`.
+La aplicacion se ejecuta en el puerto `8080` y usa MongoDB en `localhost:27017`
+por defecto. La variable `MONGODB_URI` permite reemplazar esa conexion, por
+ejemplo para usar una instancia administrada en produccion.
 
 ## 2. Como inicia la aplicacion
 
@@ -264,6 +266,8 @@ Archivos:
 - `config/DataInitializer.java`
 - `static/admin/login.html`
 - `static/js/login.js`
+- `static/ingresar.html` y `static/js/ingresar.js`
+- `Service/CuentaService.java` y `controller/CuentaRestController.java`
 
 ### Carga del usuario
 
@@ -271,6 +275,7 @@ Archivos:
 
 ```java
 Usuario usuario = usuarioRepository.findByUsername(username)
+    .or(() -> usuarioRepository.findByEmail(username))
     .orElseThrow(() ->
         new UsernameNotFoundException("Usuario no encontrado: " + username));
 ```
@@ -336,28 +341,71 @@ El panel `/admin/**` requiere autenticacion.
 )
 ```
 
-Los tres roles usan el mismo formulario `/admin/login.html`; no comparten el
-mismo panel. Spring procesa las credenciales en `/login` y el `successHandler`
-de `SecurityConfig` redirige segun el rol autenticado.
+El formulario `/admin/login.html` se conserva para administración. Las cuentas
+de clientes y propietarios usan `/ingresar.html`, que permite iniciar sesión o
+registrarse mediante `POST /api/cuenta/registro`. Las contraseñas se codifican
+con BCrypt; el nombre de usuario de las nuevas cuentas es su correo electrónico.
+`CustomUserDetailsService` acepta también el correo de cuentas existentes.
+Spring procesa el inicio de sesión en `/login` y `SecurityConfig` redirige según
+el rol autenticado. El formulario administrativo envía `adminLogin`; el
+formulario público envía `publicLogin`. El manejador de éxito solo permite
+`ROLE_ADMIN` en el acceso administrativo y solo `CLIENTE` o `PROPIETARIO` en el
+público. Cuando el rol no corresponde, invalida la sesión antes de redirigir.
 
 ```java
 .logout(logout -> logout
     .logoutUrl("/logout")
-    .logoutSuccessUrl("/admin/login.html?logout=true")
+    .logoutSuccessHandler(...)
 )
 ```
 
 `BCryptPasswordEncoder` guarda contrasenas con hash, no en texto plano.
 
+### Favoritos por cuenta
+
+`CuentaRestController` expone el perfil autenticado y las rutas
+`GET /api/cuenta/favoritos` y `PUT /api/cuenta/favoritos`. Los IDs favoritos se
+guardan en el documento MongoDB de `Usuario`, de modo que siguen a la cuenta en
+otros dispositivos. Las personas sin sesión pueden usar el almacenamiento
+local del navegador; al iniciar sesión, esos favoritos se combinan con los de
+la cuenta. El navegador no muestra una lista local perteneciente a otra cuenta.
+
+El mismo controlador expone `GET` y `PUT /api/cuenta/perfil` y
+`PATCH /api/cuenta/password`. El usuario autenticado solo puede editar su nombre
+y celular; el correo se mantiene de solo lectura para no cambiar su identidad
+de sesión. `CuentaService` valida los datos tanto en registro como en perfil:
+el nombre debe tener al menos dos letras y no incluir números, y el celular
+debe incluir entre 7 y 15 dígitos. El cambio de contraseña exige la clave
+actual y almacena la nueva con BCrypt.
+
+En el registro, `POST /api/cuenta/registro` solo admite los roles `CLIENTE` y
+`PROPIETARIO`; el cliente no puede crear una cuenta administradora. El
+formulario valida el nombre y el celular antes de enviarlos y el servicio
+repite las comprobaciones en el servidor.
+
+### Tema y textos legales
+
+`/js/tema.js` inicializa el tema claro por defecto, agrega el selector claro/oscuro
+a la navegación pública y a los portales, y conserva la preferencia en el
+almacenamiento local. `/css/identidad-tema.css` centraliza los colores azules de
+marca y los estilos compartidos de los portales de cliente y propietario.
+`/terminos.html` y `/privacidad.html` contienen textos originales del proyecto;
+el formulario de registro y el de contacto enlazan ambos documentos y requieren
+aceptar la casilla. La página de valoración expone los enlaces en su pie.
+
 ### Usuario administrador inicial
 
-`DataInitializer` se ejecuta al iniciar la aplicacion. Si no existe `admin`, crea uno y codifica su contrasena:
+`DataInitializer` se ejecuta al iniciar la aplicacion en perfiles distintos de
+`prod`. Si no existe `admin`, crea uno y codifica su contrasena:
 
 ```java
 admin.setPassword(passwordEncoder.encode("admin123"));
 ```
 
-En produccion se debe cambiar esa contrasena inicial.
+La clase tiene `@Profile("!prod")`, por lo que las cuentas de demostracion no
+se crean en produccion. Para el perfil `prod`, provisiona una cuenta `ADMIN`
+segura directamente en la base de datos con una contrasena BCrypt antes de
+iniciar el servicio. Nunca publiques las contrasenas de demostracion.
 
 ## 10. Modelo predictivo con Weka
 
@@ -716,9 +764,10 @@ Si devuelve `modeloCargado: true`, Weka encontro el modelo y el archivo ARFF.
 | `PROPIETARIO` | `/propietario/**` | `/api/propietario/**` |
 | `CLIENTE` | `/cliente/**` | `/api/cliente/**` |
 
-La pagina de login es compartida. El rol se carga desde MongoDB por
+La administracion usa `/admin/login.html`; clientes y propietarios usan
+`/ingresar.html` y pueden crear una cuenta. El rol se carga desde MongoDB por
 `CustomUserDetailsService`; por eso la ruta de destino depende del valor real de
-`Usuario.rol`, no del nombre escrito en el formulario.
+`Usuario.rol`, no de la opcion visual del formulario.
 
 `DataInitializer` crea las siguientes cuentas solo si no existen:
 
@@ -769,6 +818,17 @@ El cambio usa `PATCH /api/propietario/propiedades/{id}/estado`. El controller
 valida que la propiedad pertenezca al propietario autenticado. El contador
 `Propiedad.visitas` representa solicitudes de visita registradas, no vistas de
 la pagina.
+
+El propietario tambien puede publicar con `POST /api/propietario/propiedades`
+y editar con `PUT /api/propietario/propiedades/{id}`. Ambos endpoints reciben
+multipart con los datos de la propiedad y hasta cuatro imagenes guardadas en
+GridFS. El backend asigna el propietario desde la sesion, establece
+`visible=false` y no acepta que el cliente indique otro propietario. Una
+edicion vuelve a ocultar el anuncio para que el administrador lo revise de
+nuevo. Los cambios de disponibilidad solo se permiten despues de la aprobacion.
+
+`portal-cuenta.js` comparte entre ambos portales la edicion de nombre y celular
+y el flujo de cambio de contrasena. El correo se presenta como solo lectura.
 
 ### Consultas
 
@@ -836,7 +896,42 @@ gestione.
 Si el propietario cambia la propiedad a `EN_PROCESO`, deja de aparecer en el
 catalogo de solicitudes y no admite nuevos contactos ni visitas.
 
-## 17. Resumen mental
+## 17. Configuracion y despliegue
+
+`src/main/resources/application.properties` usa una URI configurable:
+
+```properties
+spring.data.mongodb.uri=${MONGODB_URI:mongodb://localhost:27017/bienesraices}
+```
+
+En local, si `MONGODB_URI` no existe, se conserva MongoDB en
+`localhost:27017`. Para desplegar, configura `MONGODB_URI` como secreto del
+proveedor de hosting y apunta a una instancia remota, como MongoDB Atlas. No
+uses una URI con credenciales en el repositorio. La base debe ser accesible
+desde la red del proveedor y conservar GridFS, que almacena las imagenes de
+propiedades.
+
+En produccion activa `SPRING_PROFILES_ACTIVE=prod`. `DataInitializer` usa
+`@Profile("!prod")`, por lo que las cuentas demo no se insertan con ese perfil.
+Antes de arrancar la aplicacion, crea de manera segura una cuenta `ADMIN`
+habilitada en la base de produccion con una contrasena BCrypt. Las cuentas
+publicas de registro solo pueden obtener los roles `CLIENTE` y `PROPIETARIO`.
+
+Requisitos y comprobaciones previas:
+
+1. Java 21 y Maven (el wrapper `mvnw` esta incluido).
+2. Ejecutar `.\mvnw.cmd test` en Windows o `./mvnw test` en macOS/Linux.
+3. Configurar `MONGODB_URI` y `SPRING_PROFILES_ACTIVE=prod` en el panel privado
+   del proveedor. `GROQ_API_KEY` es opcional; se requiere solo para el chat.
+4. Construir el JAR con `.\mvnw.cmd clean package` o `./mvnw clean package` y
+   ejecutar el artefacto `target/inmobiliaria-0.0.1-SNAPSHOT.jar`.
+5. Probar autenticacion por rol, registro, subida y lectura de imagenes,
+   visitas, consultas y persistencia MongoDB antes de habilitar trafico publico.
+
+Para detener una ejecucion local iniciada desde terminal, pulsa `Ctrl+C` en
+esa terminal. En VS Code, usa el boton **Stop** de la sesion de depuracion.
+
+## 18. Resumen mental
 
 - Spring Boot inicia y conecta las piezas.
 - Controllers exponen URLs.

@@ -3,15 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="/js/tema.js"></script>
   <title>Blog | Bienes Raíces</title>
   <link rel="shortcut icon" href="/img/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0">
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
   <link rel="stylesheet" href="/css/app.css">
   <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/estilo-premium.css">
+  <link rel="stylesheet" href="/css/identidad-tema.css">
 </head>
 <body>
 
@@ -26,11 +29,16 @@
           <li><a href="/" class="navbar-link" style="color:var(--neutral-20);">Inicio</a></li>
           <li><a href="/nosotros.html" class="navbar-link" style="color:var(--neutral-20);">Nosotros</a></li>
           <li><a href="/anuncio.html" class="navbar-link" style="color:var(--neutral-20);">Propiedades</a></li>
+          <li><a href="/valoracion.html" class="navbar-link" style="color:var(--neutral-20);">Valoración</a></li>
           <li><a href="/blog.html" class="navbar-link active" style="color:var(--primary-100);background:#EBF3FF;">Blog</a></li>
           
         </ul>
         <div class="navbar-cta">
-          <a href="/admin/login.html" class="btn-link">Login</a>
+          <a href="/favoritos.html" class="favorite-shortcut" aria-label="Mis favoritos">
+            <span class="material-symbols-rounded" aria-hidden="true">favorite</span>
+            <span class="favorite-count" data-favorites-count hidden>0</span>
+          </a>
+          <a href="/ingresar.html" class="btn-link">Ingresar</a>
           <a href="/contacto.html" class="btn btn-fill">Contáctanos</a>
         </div>
       </nav>
@@ -152,7 +160,7 @@
           <h4 class="footer-title">Contacto</h4>
           <div class="footer-links">
             <a href="mailto:info@bienesraices.com">info@bienesraices.com</a>
-            <a href="tel:+573001234567">+57 300 123 4567</a>
+            <a href="tel:+573215073671">+57 321 507 3671</a>
           </div>
         </div>
       </div>
@@ -163,6 +171,7 @@
   </footer>
 
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script src="/js/favoritos.js"></script>
   <script src="/js/main.js"></script>
   <script>
     AOS.init({ duration: 700, once: true, offset: 60 });

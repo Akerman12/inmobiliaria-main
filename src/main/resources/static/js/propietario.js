@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const visitasTotal = document.getElementById('visitasTotal');
   const buscarPropiedades = document.getElementById('buscarPropiedades');
   const filtroEstadoPropiedades = document.getElementById('filtroEstadoPropiedades');
+  const formPublicarPropiedad = document.getElementById('formPublicarPropiedad');
+  const mensajePublicacion = document.getElementById('mensajePublicacion');
   let propiedadesActuales = [];
   const listaConsultas = document.getElementById('listaConsultas');
   const consultasTotal = document.getElementById('consultasTotal');
@@ -59,6 +61,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  formPublicarPropiedad.addEventListener('submit', publicarPropiedad);
+
   buscarConsultas.addEventListener('input', renderizarConsultas);
   filtroConsultas.addEventListener('change', renderizarConsultas);
   buscarPropiedades.addEventListener('input', renderizarListaPropiedades);
@@ -88,6 +92,97 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await cargarConsultas(propiedades);
     await cargarVisitas();
+  }
+
+  async function publicarPropiedad(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const id = form.elements.namedItem('id').value.trim();
+    const imagenes = form.elements.namedItem('imagenes').files;
+    if (!id && imagenes.length === 0) {
+      mostrarMensajePublicacion('Adjunta al menos una imagen para crear el anuncio.', 'error');
+      return;
+    }
+    if (imagenes.length > 4) {
+      mostrarMensajePublicacion('Puedes adjuntar hasta cuatro imágenes.', 'error');
+      return;
+    }
+
+    const boton = form.querySelector('[type="submit"]');
+    const textoOriginal = boton.innerHTML;
+    boton.disabled = true;
+    boton.textContent = id ? 'Enviando cambios...' : 'Enviando a revisión...';
+    mostrarMensajePublicacion('', '');
+    const datos = {
+      titulo: form.elements.namedItem('titulo').value.trim(),
+      operacion: form.elements.namedItem('operacion').value,
+      tipo: form.elements.namedItem('tipo').value,
+      precio: Number(form.elements.namedItem('precio').value),
+      metrosCuadrados: Number(form.elements.namedItem('metrosCuadrados').value),
+      habitaciones: Number(form.elements.namedItem('habitaciones').value),
+      wc: Number(form.elements.namedItem('wc').value),
+      estacionamiento: Number(form.elements.namedItem('estacionamiento').value),
+      ciudad: form.elements.namedItem('ciudad').value.trim(),
+      barrio: form.elements.namedItem('barrio').value.trim(),
+      direccion: form.elements.namedItem('direccion').value.trim(),
+      descripcion: form.elements.namedItem('descripcion').value.trim()
+    };
+    const contenido = new FormData();
+    contenido.append('propiedad', new Blob([JSON.stringify(datos)], { type: 'application/json' }));
+    Array.from(imagenes).forEach(imagen => contenido.append('imagenes', imagen));
+
+    try {
+      const response = await fetch(id
+        ? `/api/propietario/propiedades/${encodeURIComponent(id)}`
+        : '/api/propietario/propiedades', {
+        method: id ? 'PUT' : 'POST',
+        credentials: 'same-origin',
+        body: contenido
+      });
+      if (!response.ok) {
+        const detalle = await response.json().catch(() => ({}));
+        throw new Error(detalle.detail || detalle.message || 'No se pudo enviar la propiedad.');
+      }
+
+      form.reset();
+      form.elements.namedItem('id').value = '';
+      form.elements.namedItem('imagenes').required = true;
+      document.getElementById('tituloFormularioPropiedad').textContent = 'Publicar una propiedad';
+      mostrarMensajePublicacion(
+        'Anuncio enviado. Quedará en revisión antes de aparecer en el catálogo.',
+        'success'
+      );
+      await cargarPropiedades();
+      mostrarPanel('panel-propiedades');
+      history.replaceState(null, '', '#panel-propiedades');
+    } catch (error) {
+      mostrarMensajePublicacion(error.message || 'No se pudo enviar el anuncio.', 'error');
+    } finally {
+      boton.innerHTML = textoOriginal;
+      boton.disabled = false;
+    }
+  }
+
+  function mostrarMensajePublicacion(texto, tipo) {
+    mensajePublicacion.textContent = texto;
+    mensajePublicacion.className = `portal-message ${tipo}`;
+    mensajePublicacion.hidden = !texto;
+  }
+
+  function prepararEdicion(propiedad) {
+    const form = formPublicarPropiedad;
+    form.elements.namedItem('id').value = propiedad.id;
+    ['titulo', 'operacion', 'tipo', 'precio', 'metrosCuadrados', 'habitaciones',
+      'wc', 'estacionamiento', 'ciudad', 'barrio', 'direccion', 'descripcion']
+      .forEach(campo => {
+        form.elements.namedItem(campo).value = propiedad[campo] ?? '';
+      });
+    form.elements.namedItem('imagenes').required = false;
+    document.getElementById('tituloFormularioPropiedad').textContent = 'Actualizar propiedad';
+    mostrarMensajePublicacion('Al guardar, los cambios se enviarán nuevamente a revisión.', 'success');
+    mostrarPanel('panel-publicar');
+    history.replaceState(null, '', '#panel-publicar');
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   async function cargarVisitas() {
@@ -311,6 +406,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       totalPropiedades.textContent = '0';
       disponibles.textContent = '0';
       enProceso.textContent = '0';
+      document.getElementById('pendientesRevision').textContent = '0';
       visitasTotales.textContent = '0';
       document.getElementById('resumenDisponibles').textContent = '0';
       document.getElementById('resumenEnProceso').textContent = '0';
@@ -323,13 +419,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const total = propiedades.length;
     propiedadesCount.textContent = `${total} ${total === 1 ? 'inmueble' : 'inmuebles'}`;
-    const disponiblesCount = propiedades.filter(p => (p.estadoComercial || 'DISPONIBLE').toUpperCase() === 'DISPONIBLE').length;
-    const enProcesoCount = propiedades.filter(p => (p.estadoComercial || 'DISPONIBLE').toUpperCase() === 'EN_PROCESO').length;
+    const pendientesCount = propiedades.filter(p => !p.visible).length;
+    const disponiblesCount = propiedades.filter(p => p.visible && (p.estadoComercial || 'DISPONIBLE').toUpperCase() === 'DISPONIBLE').length;
+    const enProcesoCount = propiedades.filter(p => p.visible && (p.estadoComercial || 'DISPONIBLE').toUpperCase() === 'EN_PROCESO').length;
     const visitas = propiedades.reduce((sum, p) => sum + (Number(p.visitas) || 0), 0);
 
     totalPropiedades.textContent = total;
     disponibles.textContent = disponiblesCount;
     enProceso.textContent = enProcesoCount;
+    document.getElementById('pendientesRevision').textContent = pendientesCount;
     visitasTotales.textContent = visitas;
     document.getElementById('resumenDisponibles').textContent = disponiblesCount;
     document.getElementById('resumenEnProceso').textContent = enProcesoCount;
@@ -338,7 +436,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     propiedadesRecientes.innerHTML = propiedades.slice(0, 4).map((propiedad) => {
       const estaEnProceso = (propiedad.estadoComercial || 'DISPONIBLE').toUpperCase() === 'EN_PROCESO';
-      const estadoTexto = estaEnProceso ? 'En proceso' : 'Disponible';
+      const estadoTexto = !propiedad.visible ? 'En revisión' : (estaEnProceso ? 'En proceso' : 'Disponible');
       const imagen = propiedad.imagenes && propiedad.imagenes.length > 0
         ? propiedad.imagenes[0]
         : '/img/default.jpg';
@@ -351,7 +449,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="recent-property-meta">${escaparHtml(propiedad.ciudad || 'Ubicación no especificada')} · ${propiedad.operacion === 'arriendo' ? 'Arriendo' : 'Venta'}</div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
-            <span class="owner-status ${estaEnProceso ? 'in-process' : 'available'}">${estadoTexto}</span>
+            <span class="owner-status ${!propiedad.visible || estaEnProceso ? 'in-process' : 'available'}">${estadoTexto}</span>
             <a class="owner-text-link" href="/propiedad.html?id=${encodeURIComponent(propiedad.id)}" aria-label="Ver ${escaparHtml(propiedad.titulo || 'propiedad')}">
               <span class="material-symbols-rounded">open_in_new</span>
             </a>
@@ -368,9 +466,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const filtroEstado = filtroEstadoPropiedades.value;
     const filtradas = propiedadesActuales.filter((propiedad) => {
       const estado = (propiedad.estadoComercial || 'DISPONIBLE').toUpperCase();
+      const enRevision = !propiedad.visible;
       const coincideTexto = [propiedad.titulo, propiedad.ciudad, propiedad.barrio]
         .some(valor => String(valor || '').toLocaleLowerCase('es-CO').includes(texto));
-      return coincideTexto && (filtroEstado === 'TODAS' || estado === filtroEstado);
+      const coincideEstado = filtroEstado === 'TODAS'
+        || (filtroEstado === 'REVISION' ? enRevision : !enRevision && estado === filtroEstado);
+      return coincideTexto && coincideEstado;
     });
 
     listaPropiedades.replaceChildren();
@@ -386,6 +487,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     filtradas.forEach((propiedad) => {
       const estadoActual = (propiedad.estadoComercial || 'DISPONIBLE').toUpperCase();
+      const enRevision = !propiedad.visible;
       const imagen = propiedad.imagenes && propiedad.imagenes.length > 0
         ? propiedad.imagenes[0]
         : '/img/default.jpg';
@@ -405,14 +507,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span title="Solicitudes de visita"><span class="material-symbols-rounded">event</span>${Number(propiedad.visitas) || 0} solic.</span>
           </div>
           <div class="owner-property-state">
-            <label for="estado-${escaparHtml(propiedad.id)}">Estado comercial</label>
+            ${enRevision
+              ? '<span class="owner-review-status"><span class="material-symbols-rounded">hourglass_top</span>Pendiente de revisión</span>'
+              : `<label for="estado-${escaparHtml(propiedad.id)}">Estado comercial</label>
             <select id="estado-${escaparHtml(propiedad.id)}" data-property-status="${escaparHtml(propiedad.id)}">
               <option value="DISPONIBLE" ${estadoActual === 'DISPONIBLE' ? 'selected' : ''}>Disponible</option>
               <option value="EN_PROCESO" ${estadoActual === 'EN_PROCESO' ? 'selected' : ''}>En proceso</option>
-            </select>
+            </select>`}
           </div>
           <div class="owner-property-footer">
             <span class="owner-property-price">$${Number(propiedad.precio || 0).toLocaleString('es-CO')}</span>
+            <button type="button" class="btn btn-outline btn-sm" data-edit-property="${escaparHtml(propiedad.id)}">
+              <span class="material-symbols-rounded">edit</span>Editar
+            </button>
             <a class="btn btn-outline btn-sm" href="/propiedad.html?id=${encodeURIComponent(propiedad.id)}">
               <span class="material-symbols-rounded">open_in_new</span>Ver ficha
             </a>
@@ -420,7 +527,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       `;
       const selector = tarjeta.querySelector('[data-property-status]');
-      selector.addEventListener('change', () => actualizarEstadoPropiedad(propiedad, selector.value));
+      if (selector) selector.addEventListener('change', () => actualizarEstadoPropiedad(propiedad, selector.value));
+      tarjeta.querySelector('[data-edit-property]').addEventListener('click', () => prepararEdicion(propiedad));
       listaPropiedades.appendChild(tarjeta);
     });
   }

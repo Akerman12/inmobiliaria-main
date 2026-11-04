@@ -2,6 +2,9 @@
 let _todasPropiedades = [];
 let _listaFiltrada    = [];
 let _paginaActual     = 1;
+let _mapaCatalogo     = null;
+let _marcadoresMapa   = null;
+let _vistaCatalogo    = 'lista';
 const POR_PAGINA      = 6;
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
@@ -12,8 +15,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const esIndex = window.location.pathname === '/' ||
                   window.location.pathname.endsWith('index.html') ||
                   window.location.pathname === '';
+  const esFavoritos = document.body.dataset.page === 'favoritos';
+  if (!esIndex && !esFavoritos) _vincularVistasCatalogo();
 
   try {
+    await window.BelarFavoritos.ready;
     const res = await fetch('http://localhost:8080/api/propiedades/visibles');
     if (!res.ok) throw new Error('Error al cargar propiedades');
     const propiedades = await res.json();
@@ -33,6 +39,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (esIndex) {
       renderizarPropiedades(propiedades.slice(0, 3), contenedor);
+      return;
+    }
+
+    if (esFavoritos) {
+      const pintarFavoritos = () => {
+        const idsGuardados = new Set(window.BelarFavoritos.ids());
+        const favoritas = propiedades.filter(p => idsGuardados.has(String(p.id)));
+        if (favoritas.length) {
+          renderizarPropiedades(favoritas, contenedor);
+          return;
+        }
+
+        const hayFavoritosGuardados = idsGuardados.size > 0;
+        contenedor.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1;">
+            <span class="material-symbols-rounded">${hayFavoritosGuardados ? 'home' : 'favorite_border'}</span>
+            <h3>${hayFavoritosGuardados ? 'Tus favoritos ya no están disponibles' : 'Aún no tienes favoritos'}</h3>
+            <p>${hayFavoritosGuardados ? 'Las propiedades que guardaste ya no están publicadas.' : 'Guarda las propiedades que te interesan y aparecerán aquí.'}</p>
+          </div>`;
+      };
+
+      pintarFavoritos();
+      document.addEventListener('favoritos:cambio', pintarFavoritos);
       return;
     }
 
@@ -219,6 +248,7 @@ function _mostrarPagina(pagina) {
   const fin    = Math.min(inicio + POR_PAGINA, total);
 
   renderizarPropiedades(_listaFiltrada.slice(inicio, fin), document.getElementById('lista-anuncios'));
+  _actualizarMapa(_listaFiltrada);
 
   const textoEl = document.getElementById('resultados-texto');
   if (textoEl) {
@@ -258,6 +288,118 @@ function _renderizarPaginacion(totalPaginas) {
   }
 }
 
+function _vincularVistasCatalogo() {
+  const lista = document.getElementById('lista-anuncios');
+  const vistaMapa = document.getElementById('mapa-propiedades-view');
+  const botonLista = document.getElementById('vista-lista');
+  const botonMapa = document.getElementById('vista-mapa');
+  if (!lista || !vistaMapa || !botonLista || !botonMapa) return;
+
+  const cambiarVista = vista => {
+    _vistaCatalogo = vista;
+    const mostrarMapa = vista === 'mapa';
+    lista.hidden = mostrarMapa;
+    vistaMapa.hidden = !mostrarMapa;
+    botonLista.setAttribute('aria-pressed', String(!mostrarMapa));
+    botonMapa.setAttribute('aria-pressed', String(mostrarMapa));
+    if (mostrarMapa) {
+      _inicializarMapa();
+      _actualizarMapa(_listaFiltrada);
+      if (_mapaCatalogo) setTimeout(() => _mapaCatalogo.invalidateSize(), 0);
+    }
+  };
+
+  botonLista.addEventListener('click', () => cambiarVista('lista'));
+  botonMapa.addEventListener('click', () => cambiarVista('mapa'));
+  if (new URLSearchParams(window.location.search).get('vista') === 'mapa') {
+    cambiarVista('mapa');
+  }
+}
+
+function _inicializarMapa() {
+  if (_mapaCatalogo) return;
+  const elementoMapa = document.getElementById('mapa-propiedades');
+  if (!elementoMapa || !window.L) {
+    console.error('No se pudo inicializar el mapa: Leaflet no está disponible.');
+    if (elementoMapa) elementoMapa.hidden = true;
+    const estadoVacio = document.getElementById('mapa-propiedades-vacio');
+    if (estadoVacio) {
+      estadoVacio.hidden = false;
+      estadoVacio.querySelector('strong').textContent = 'No se pudo cargar el mapa';
+      estadoVacio.querySelectorAll('span')[1].textContent = 'Comprueba tu conexión e inténtalo nuevamente.';
+    }
+    return;
+  }
+
+  _mapaCatalogo = L.map(elementoMapa).setView([10.4, -75.5], 6);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Sources: Esri, HERE, Garmin, OpenStreetMap contributors, and the GIS user community',
+    maxZoom: 19
+  }).addTo(_mapaCatalogo);
+  _marcadoresMapa = L.layerGroup().addTo(_mapaCatalogo);
+}
+
+function _actualizarMapa(propiedades) {
+  if (_vistaCatalogo !== 'mapa') return;
+  _inicializarMapa();
+  if (!_mapaCatalogo || !_marcadoresMapa) return;
+
+  _marcadoresMapa.clearLayers();
+  const propiedadesConUbicacion = propiedades.filter(propiedad => {
+    if (propiedad.latitud === null || propiedad.longitud === null ||
+        propiedad.latitud === undefined || propiedad.longitud === undefined ||
+        String(propiedad.latitud).trim() === '' || String(propiedad.longitud).trim() === '') {
+      return false;
+    }
+
+    const latitud = Number(propiedad.latitud);
+    const longitud = Number(propiedad.longitud);
+    return Number.isFinite(latitud) && latitud >= -90 && latitud <= 90 &&
+      Number.isFinite(longitud) && longitud >= -180 && longitud <= 180;
+  });
+  const elementoMapa = document.getElementById('mapa-propiedades');
+  const estadoVacio = document.getElementById('mapa-propiedades-vacio');
+  if (!propiedadesConUbicacion.length) {
+    elementoMapa.hidden = true;
+    estadoVacio.hidden = false;
+    return;
+  }
+
+  elementoMapa.hidden = false;
+  estadoVacio.hidden = true;
+  const puntos = [];
+
+  propiedadesConUbicacion.forEach(propiedad => {
+    const posicion = [Number(propiedad.latitud), Number(propiedad.longitud)];
+    puntos.push(posicion);
+    const marcador = L.circleMarker(posicion, {
+      radius: 11,
+      color: '#ffffff',
+      weight: 3,
+      opacity: 1,
+      fillColor: '#2179ff',
+      fillOpacity: 1
+    });
+    const popup = document.createElement('div');
+    const titulo = document.createElement('strong');
+    titulo.textContent = propiedad.titulo || 'Propiedad';
+    const precio = document.createElement('p');
+    precio.textContent = `$${Number(propiedad.precio || 0).toLocaleString('es-CO')}`;
+    const enlace = document.createElement('a');
+    enlace.href = `/propiedad.html?id=${encodeURIComponent(propiedad.id)}`;
+    enlace.textContent = 'Ver propiedad';
+    popup.append(titulo, precio, enlace);
+    marcador.bindPopup(popup).bindTooltip(titulo.textContent, { direction: 'top', offset: [0, -8] });
+    _marcadoresMapa.addLayer(marcador);
+  });
+
+  requestAnimationFrame(() => {
+    _mapaCatalogo.invalidateSize();
+    if (puntos.length === 1) _mapaCatalogo.setView(puntos[0], 14);
+    else _mapaCatalogo.fitBounds(L.latLngBounds(puntos), { padding: [40, 40], maxZoom: 13 });
+  });
+}
+
 // ─── Render de cards ──────────────────────────────────────────────────────────
 function renderizarPropiedades(lista, contenedor) {
   if (lista.length === 0) {
@@ -270,6 +412,7 @@ function renderizarPropiedades(lista, contenedor) {
     return;
   }
 
+  const idsFavoritos = new Set(window.BelarFavoritos.ids());
   contenedor.innerHTML = lista.map(p => {
     const imagenUrl = (p.imagenes && p.imagenes.length > 0) ? p.imagenes[0] : '/img/default.jpg';
     return `
@@ -279,6 +422,12 @@ function renderizarPropiedades(lista, contenedor) {
             <img loading="lazy" src="${imagenUrl}" alt="${p.titulo}" class="img-cover" onerror="this.src='/img/default.jpg'">
           </div>
           <span class="tag card-tag ${(p.operacion || 'venta') === 'arriendo' ? 'green' : ''}">${(p.operacion || 'venta') === 'arriendo' ? 'En Arriendo' : 'En Venta'}</span>
+          <button type="button" class="property-favorite-toggle" data-favorite-toggle="${p.id}"
+            aria-pressed="${idsFavoritos.has(String(p.id))}"
+            aria-label="${idsFavoritos.has(String(p.id)) ? 'Quitar de favoritos' : 'Guardar en favoritos'}"
+            title="${idsFavoritos.has(String(p.id)) ? 'Quitar de favoritos' : 'Guardar en favoritos'}">
+            <span class="material-symbols-rounded" aria-hidden="true">${idsFavoritos.has(String(p.id)) ? 'favorite' : 'favorite_border'}</span>
+          </button>
         </div>
         <div class="card-body">
           <h3 class="card-title title-small">

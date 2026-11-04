@@ -1,6 +1,7 @@
 package com.example.inmobiliaria.config;
 
 import java.util.List;
+import java.util.Locale;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
@@ -21,8 +22,10 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username)
             throws UsernameNotFoundException {
+        String credencial = username.trim();
 
-        Usuario usuario = usuarioRepository.findByUsername(username)
+        Usuario usuario = usuarioRepository.findByUsername(credencial)
+                .or(() -> usuarioRepository.findByEmail(credencial.toLowerCase(Locale.ROOT)))
                 .orElseThrow(() ->
                         new UsernameNotFoundException("Usuario no encontrado: " + username));
 

@@ -11,8 +11,12 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.http.HttpStatus;
 
 @Configuration
 @EnableWebSecurity
@@ -51,6 +55,9 @@ public class SecurityConfig {
                     
                 ).permitAll()
 
+                   .requestMatchers(HttpMethod.POST, "/api/cuenta/registro").permitAll()
+                   .requestMatchers("/api/cuenta/**").authenticated()
+
                 // Páginas públicas
                 .requestMatchers(
                      "/",
@@ -61,6 +68,11 @@ public class SecurityConfig {
                      "/blog.html",
                      "/contacto.html",
                      "/propiedad.html",
+                     "/favoritos.html",
+                     "/valoracion.html",
+                     "/ingresar.html",
+                     "/terminos.html",
+                     "/privacidad.html",
                      "/css/**",
                      "/js/**",
                      "/img/**",
@@ -93,38 +105,70 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
 
+            .exceptionHandling(ex -> ex.defaultAuthenticationEntryPointFor(
+                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                new AntPathRequestMatcher("/api/cuenta/**")
+            ))
+
             .formLogin(form -> form
                 .loginPage("/admin/login.html")    
                 .loginProcessingUrl("/login")
                 .usernameParameter("username")
                 .passwordParameter("password")
-                .successHandler((request, response, authentication) -> {
-                    boolean isAdmin = authentication.getAuthorities().stream()
-                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-                    boolean isPropietario = authentication.getAuthorities().stream()
-                        .anyMatch(a -> a.getAuthority().equals("ROLE_PROPIETARIO"));
-
-                    if (isAdmin) {
-                        response.sendRedirect("/admin/index.html");
-                    } else if (isPropietario) {
-                        response.sendRedirect("/propietario/index.html");
-                    } else {
-                        response.sendRedirect("/cliente/index.html");
-                    }
+                .successHandler(loginSuccessHandler())
+                .failureHandler((request, response, exception) -> {
+                    String page = request.getParameter("publicLogin") != null
+                            ? "/ingresar.html?error=true"
+                            : "/admin/login.html?error=true";
+                    response.sendRedirect(page);
                 })
-                .failureUrl("/admin/login.html?error=true")
                 .permitAll()
             )
 
             .logout(logout -> logout
                 .logoutUrl("/logout")
-                .logoutSuccessUrl("/admin/login.html?logout=true")
+                .logoutSuccessHandler((request, response, authentication) -> {
+                    boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
+                            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+                    response.sendRedirect(isAdmin
+                            ? "/admin/login.html?logout=true"
+                            : "/ingresar.html?logout=true");
+                })
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
                 .permitAll()
             );
 
         return http.build();
+    }
+
+    AuthenticationSuccessHandler loginSuccessHandler() {
+        return (request, response, authentication) -> {
+            boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            boolean isPropietario = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_PROPIETARIO"));
+            boolean isCliente = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_CLIENTE"));
+            boolean publicLogin = request.getParameter("publicLogin") != null;
+            boolean adminLogin = request.getParameter("adminLogin") != null;
+
+            if (publicLogin && !adminLogin && (isPropietario || isCliente)) {
+                response.sendRedirect(isPropietario
+                        ? "/propietario/index.html"
+                        : "/cliente/index.html");
+            } else if (adminLogin && !publicLogin && isAdmin) {
+                response.sendRedirect("/admin/index.html");
+            } else {
+                SecurityContextHolder.clearContext();
+                if (request.getSession(false) != null) {
+                    request.getSession(false).invalidate();
+                }
+                response.sendRedirect(publicLogin
+                        ? "/ingresar.html?error=role"
+                        : "/admin/login.html?error=role");
+            }
+        };
     }
 
     @Bean

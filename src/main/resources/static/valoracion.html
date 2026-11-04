@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="/js/tema.js"></script>
+  <title>Valora tu propiedad | Bienes Raíces</title>
+  <meta name="description" content="Obtén una estimación automatizada del precio de referencia de tu propiedad.">
+  <link rel="shortcut icon" href="/img/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0">
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/estilo-premium.css">
+  <link rel="stylesheet" href="/css/identidad-tema.css">
+</head>
+<body>
+  <header class="header scrolled" id="mainHeader">
+    <div class="container">
+      <a href="/" class="logo">
+        <img src="/img/logo.svg" alt="Bienes Raíces" width="36" height="36" style="border-radius:9px;">
+        <span class="logo-text" style="color:var(--neutral-10);">Bienes<span>Raíces</span></span>
+      </a>
+      <nav class="navbar" id="navbar">
+        <ul class="navbar-list">
+          <li><a href="/" class="navbar-link">Inicio</a></li>
+          <li><a href="/anuncio.html" class="navbar-link">Propiedades</a></li>
+          <li><a href="/valoracion.html" class="navbar-link active">Valoración</a></li>
+          <li><a href="/nosotros.html" class="navbar-link">Nosotros</a></li>
+        </ul>
+        <div class="navbar-cta">
+          <a href="/favoritos.html" class="favorite-shortcut" aria-label="Mis favoritos">
+            <span class="material-symbols-rounded" aria-hidden="true">favorite</span>
+            <span class="favorite-count" data-favorites-count hidden>0</span>
+          </a>
+          <a href="/ingresar.html" class="btn-link">Ingresar</a>
+          <a href="/contacto.html" class="btn btn-fill">Contáctanos</a>
+        </div>
+      </nav>
+      <button class="nav-toggle-btn" id="navToggle" aria-label="Abrir menú">
+        <span class="material-symbols-rounded">menu</span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="section valuation-section">
+      <div class="container">
+        <div class="section-header" style="text-align:left;margin-bottom:44px;">
+          <span class="section-eyebrow">Valoración</span>
+          <h1 class="section-title">¿Cuánto vale tu propiedad?</h1>
+          <p class="section-text" style="margin-inline:0;">Cuéntanos sus características y obtén una estimación de referencia en segundos.</p>
+        </div>
+        <div class="valuation-grid">
+          <section class="valuation-form-card" aria-labelledby="valuation-title">
+            <h2 id="valuation-title" class="title-large">Datos de tu propiedad</h2>
+            <p>Completa todos los campos para calcular la estimación.</p>
+            <div id="valuation-message" class="account-message" role="status" hidden></div>
+            <form id="valuation-form" class="valuation-form">
+              <div class="valuation-fields">
+                <div class="form-group">
+                  <label class="form-label" for="valuation-city">Ciudad</label>
+                  <select class="form-control" id="valuation-city" name="ciudad" required>
+                    <option value="Cartagena">Cartagena</option>
+                    <option value="Bogota">Bogotá</option>
+                    <option value="Medellin">Medellín</option>
+                    <option value="Barranquilla">Barranquilla</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="valuation-bedrooms">Habitaciones</label>
+                  <input class="form-control" id="valuation-bedrooms" name="habitaciones" type="number" min="0" max="30" value="3" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="valuation-bathrooms">Baños</label>
+                  <input class="form-control" id="valuation-bathrooms" name="wc" type="number" min="0" max="30" value="2" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="valuation-parking">Parqueaderos</label>
+                  <input class="form-control" id="valuation-parking" name="estacionamiento" type="number" min="0" max="30" value="1" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="valuation-area">Área en m²</label>
+                  <input class="form-control" id="valuation-area" name="metrosCuadrados" type="number" min="1" max="100000" step="0.1" value="90" required>
+                </div>
+              </div>
+              <button class="btn btn-fill" type="submit" style="width:100%;justify-content:center;">
+                <span class="material-symbols-rounded">calculate</span>
+                Calcular valoración
+              </button>
+            </form>
+          </section>
+
+          <section class="valuation-result-card" aria-live="polite" aria-labelledby="valuation-result-title">
+            <span class="valuation-result-eyebrow">Estimación de referencia</span>
+            <h2 id="valuation-result-title" class="title-medium">Tu estimación aparecerá aquí</h2>
+            <p id="valuation-result-copy">Completa los datos para consultar un precio estimado.</p>
+            <p id="valuation-price" class="valuation-price" hidden></p>
+            <div id="valuation-result-details" class="valuation-result-details" hidden>
+              <p class="valuation-range">
+                Entre <strong id="valuation-minimum"></strong> y <strong id="valuation-maximum"></strong>
+              </p>
+              <div class="valuation-range-track" role="img" aria-label="Rango de error promedio del modelo">
+                <span class="valuation-range-band"></span>
+                <span class="valuation-range-marker"></span>
+              </div>
+              <p id="valuation-error-copy" class="valuation-error-copy"></p>
+              <div class="valuation-actions">
+                <a class="btn btn-fill" href="/contacto.html">
+                  <span class="material-symbols-rounded" aria-hidden="true">send</span>
+                  Hablar con un asesor
+                </a>
+                <a class="btn btn-outline" href="https://wa.me/573215073671" target="_blank" rel="noopener noreferrer">
+                  <span class="material-symbols-rounded" aria-hidden="true">chat</span>
+                  Escribir por WhatsApp
+                </a>
+              </div>
+            </div>
+            <p class="valuation-disclaimer">Es una estimación automatizada basada en un modelo de referencia. No sustituye un avalúo profesional.</p>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="/" class="logo" style="margin-bottom:16px;">
+            <img src="/img/logo.svg" alt="Belar" width="36" height="36" style="border-radius:9px;">
+            <span class="logo-text" style="color:var(--white);">Bienes<span>Raíces</span></span>
+          </a>
+          <p>Tu aliado de confianza en el mercado inmobiliario. Te acompañamos para encontrar o valorar tu propiedad.</p>
+        </div>
+        <div>
+          <h4 class="footer-title">Navegación</h4>
+          <div class="footer-links">
+            <a href="/">Inicio</a>
+            <a href="/nosotros.html">Nosotros</a>
+            <a href="/anuncio.html">Propiedades</a>
+            <a href="/blog.html">Blog</a>
+          </div>
+        </div>
+        <div>
+          <h4 class="footer-title">Servicios</h4>
+          <div class="footer-links">
+            <a href="/anuncio.html">Compra de inmuebles</a>
+            <a href="/anuncio.html">Venta de propiedades</a>
+            <a href="/contacto.html">Asesoría inmobiliaria</a>
+            <a href="/valoracion.html">Valoración de propiedades</a>
+          </div>
+        </div>
+        <div>
+          <h4 class="footer-title">Contacto</h4>
+          <div class="footer-links">
+            <a href="/contacto.html">Contáctanos</a>
+            <a href="mailto:inmobiliariabelar@gmail.com">inmobiliariabelar@gmail.com</a>
+            <a href="tel:+573215073671">+57 321 507 3671</a>
+            <a href="https://wa.me/573215073671" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p class="footer-copyright">© 2026 Bienes Raíces. Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/favoritos.js"></script>
+  <script src="/js/main.js"></script>
+  <script src="/js/valoracion.js"></script>
+</body>
+</html>

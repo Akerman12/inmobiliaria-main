@@ -32,6 +32,30 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span class="material-symbols-rounded">mail</span>
           Contactar asesor
         </a>`;
+    const calculadoraHtml = operacion === 'venta' && Number.isFinite(Number(p.precio)) && Number(p.precio) > 0
+      ? `<section class="mortgage-calculator" aria-labelledby="mortgage-title">
+          <h2 id="mortgage-title">
+            <span class="material-symbols-rounded" aria-hidden="true">calculate</span>
+            Calculadora de cuota
+          </h2>
+          <p>Simula un pago mensual aproximado para esta propiedad.</p>
+          <label for="mortgage-down-payment">Cuota inicial <output id="mortgage-down-payment-label">20%</output></label>
+          <input id="mortgage-down-payment" type="range" min="0" max="80" step="5" value="20">
+          <label for="mortgage-term">Plazo</label>
+          <select id="mortgage-term" class="form-control">
+            <option value="10">10 años</option>
+            <option value="15">15 años</option>
+            <option value="20" selected>20 años</option>
+            <option value="25">25 años</option>
+            <option value="30">30 años</option>
+          </select>
+          <label for="mortgage-rate">Tasa anual estimada (%)</label>
+          <input id="mortgage-rate" class="form-control" type="number" min="0" max="100" step="0.1" value="12">
+          <p class="mortgage-payment-label">Cuota mensual estimada</p>
+          <output id="mortgage-payment" class="mortgage-payment" aria-live="polite"></output>
+          <small>Simulación orientativa; no incluye seguros, impuestos ni otros cargos del crédito.</small>
+        </section>`
+      : '';
 
     const imagenes = (p.imagenes && p.imagenes.length > 0) ? p.imagenes : ['/img/default.jpg'];
     const imagenPrincipal = imagenes[0];
@@ -156,6 +180,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                   </div>` : ''}
                 </div>
 
+                ${calculadoraHtml}
+
                 <div style="margin-top:24px;display:flex;flex-direction:column;gap:12px;">
                   ${contactoHtml}
                   ${hasCoords ? `
@@ -176,6 +202,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
       </section>
     `;
+
+    if (calculadoraHtml) {
+      const inicial = document.getElementById('mortgage-down-payment');
+      const plazo = document.getElementById('mortgage-term');
+      const tasa = document.getElementById('mortgage-rate');
+      const porcentajeInicial = document.getElementById('mortgage-down-payment-label');
+      const cuotaMensual = document.getElementById('mortgage-payment');
+      const formatoPrecio = new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        maximumFractionDigits: 0
+      });
+
+      const actualizarCuota = () => {
+        const porcentaje = Number(inicial.value);
+        const tasaAnual = Number(tasa.value);
+        const meses = Number(plazo.value) * 12;
+        const precio = Number(p.precio);
+        porcentajeInicial.value = `${porcentaje}%`;
+        if (!Number.isFinite(tasaAnual) || tasaAnual < 0 || tasaAnual > 100) {
+          cuotaMensual.textContent = 'Ingresa una tasa entre 0 y 100%.';
+          return;
+        }
+        const capital = precio * (1 - porcentaje / 100);
+        const tasaMensual = tasaAnual / 1200;
+        const cuota = tasaMensual === 0
+          ? capital / meses
+          : capital * tasaMensual / (1 - Math.pow(1 + tasaMensual, -meses));
+        cuotaMensual.textContent = formatoPrecio.format(cuota);
+      };
+
+      inicial.addEventListener('input', actualizarCuota);
+      plazo.addEventListener('change', actualizarCuota);
+      tasa.addEventListener('input', actualizarCuota);
+      actualizarCuota();
+    }
 
     // Initialize Leaflet map if coordinates exist
     if (hasCoords) {

@@ -1,5 +1,8 @@
 package com.example.inmobiliaria.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -11,6 +14,7 @@ public class Usuario {
     private String id;
     
     private String nombre;
+    private String celular;
     
     @Indexed(unique = true)
     private String username; // Puede ser email o nombre de usuario
@@ -23,6 +27,7 @@ public class Usuario {
     private String rol; // ADMIN, PROPIETARIO o USER
     
     private boolean enabled = true; // Para activar/desactivar usuarios
+    private List<String> favoritos = new ArrayList<>();
 
     // Constructores
     public Usuario() {
@@ -52,6 +57,14 @@ public class Usuario {
 
     public void setNombre(String nombre) {
         this.nombre = nombre;
+    }
+
+    public String getCelular() {
+        return celular;
+    }
+
+    public void setCelular(String celular) {
+        this.celular = celular;
     }
 
     public String getUsername() {
@@ -92,5 +105,13 @@ public class Usuario {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public List<String> getFavoritos() {
+        return favoritos == null ? List.of() : favoritos;
+    }
+
+    public void setFavoritos(List<String> favoritos) {
+        this.favoritos = favoritos == null ? new ArrayList<>() : new ArrayList<>(favoritos);
     }
 }

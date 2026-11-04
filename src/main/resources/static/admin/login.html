@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="/js/tema.js"></script>
   <title>Iniciar Sesión | Admin Bienes Raíces</title>
   <link rel="shortcut icon" href="/img/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,6 +12,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0">
   <link rel="stylesheet" href="/css/app.css">
   <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/identidad-tema.css">
 </head>
 <body>
 
@@ -28,16 +30,17 @@
 
       <div id="error-message" class="login-error">
         <span class="material-symbols-rounded">error</span>
-        Usuario o contraseña incorrectos
+        Correo o contraseña incorrectos.
       </div>
 
       <form action="/login" method="post" class="login-form">
+        <input type="hidden" name="adminLogin" value="true">
         <div class="form-group">
           <label class="form-label" for="username">
             <span class="material-symbols-rounded" style="font-size:1.6rem;vertical-align:middle;">person</span>
-            Usuario
+            Correo o usuario
           </label>
-          <input type="text" id="username" name="username" class="form-control" placeholder="Ingresa tu usuario" required autocomplete="username">
+          <input type="text" id="username" name="username" class="form-control" placeholder="Ingresa tu correo o usuario" required autocomplete="username">
         </div>
 
         <div class="form-group" style="position:relative;">
