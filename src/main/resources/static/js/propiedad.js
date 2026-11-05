@@ -21,8 +21,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!res.ok) throw new Error('Propiedad no encontrada');
     const p = await res.json();
     const enProceso = (p.estadoComercial || '').toUpperCase() === 'EN_PROCESO';
-    const operacion = (p.operacion || 'venta').toLowerCase();
+    const operacion = p.operacion === 'arriendo' ? 'arriendo' : 'venta';
     const etiquetaOperacion = operacion === 'arriendo' ? 'En Arriendo' : 'En Venta';
+    const tituloSeguro = window.escapeHtmlForHtml(p.titulo);
+    const precio = Number(p.precio);
+    const precioSeguro = Number.isFinite(precio) ? precio.toLocaleString('es-CO') : '';
     const contactoHtml = enProceso
       ? `<div role="status" style="width:100%;padding:14px 16px;border-radius:var(--radius-small);background:#FFF7ED;color:#9A3412;display:flex;align-items:center;gap:10px;line-height:1.5;">
           <span class="material-symbols-rounded">hourglass_top</span>
@@ -57,13 +60,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         </section>`
       : '';
 
-    const imagenes = (p.imagenes && p.imagenes.length > 0) ? p.imagenes : ['/img/default.jpg'];
-    const imagenPrincipal = imagenes[0];
+    const imagenes = (Array.isArray(p.imagenes) && p.imagenes.length > 0) ? p.imagenes : ['/img/default.jpg'];
+    const imagenPrincipal = window.escapeHtmlForHtml(window.safeMediaUrl(imagenes[0]));
 
     const galeriaHTML = imagenes.length > 1
       ? `<div class="thumb-gallery" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
           ${imagenes.map((src, i) => `
-            <img src="${src}" alt="Imagen ${i+1}" onerror="this.src='/img/default.jpg'"
+            <img src="${window.escapeHtmlForHtml(window.safeMediaUrl(src))}" alt="Imagen ${i+1}" onerror="this.src='/img/default.jpg'"
               style="width:80px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid ${i===0?'var(--primary-100)':'transparent'};"
               onclick="document.getElementById('imgPrincipal').src=this.src;
                        document.querySelectorAll('.thumb-gallery img').forEach(t=>t.style.borderColor='transparent');
@@ -77,7 +80,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const locationStr = locationParts.length ? locationParts.join(', ') : '';
 
     // Build map section HTML (only if coordinates exist)
-    const hasCoords = p.latitud && p.longitud;
+    const latitud = p.latitud == null || p.latitud === '' ? NaN : Number(p.latitud);
+    const longitud = p.longitud == null || p.longitud === '' ? NaN : Number(p.longitud);
+    const hasCoords = Number.isFinite(latitud) && Number.isFinite(longitud)
+      && latitud >= -90 && latitud <= 90 && longitud >= -180 && longitud <= 180;
     const mapSectionHTML = hasCoords ? `
       <div class="admin-card" style="margin-top:24px;">
         <div class="admin-card-header">
@@ -90,7 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           ${p.direccion || locationStr ? `
             <div style="padding:16px 24px 0;display:flex;align-items:center;gap:8px;color:var(--neutral-40);font-size:var(--fs-body-medium);">
               <span class="material-symbols-rounded" style="font-size:1.8rem;color:var(--primary-100);">place</span>
-              ${[p.direccion, p.barrio, p.ciudad].filter(Boolean).join(' · ')}
+              ${window.escapeHtmlForHtml([p.direccion, p.barrio, p.ciudad].filter(Boolean).join(' · '))}
             </div>` : ''}
           <div id="mapaPropiedad" style="width:100%;height:360px;border-radius:0 0 var(--radius-large) var(--radius-large);"></div>
         </div>
@@ -107,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <span class="material-symbols-rounded" style="font-size:1.8rem;">chevron_right</span>
             <a href="/anuncio.html" style="color:var(--primary-100);">Propiedades</a>
             <span class="material-symbols-rounded" style="font-size:1.8rem;">chevron_right</span>
-            <span>${p.titulo}</span>
+            <span>${tituloSeguro}</span>
           </div>
         </div>
       </div>
@@ -119,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <!-- Gallery + Description + Map -->
             <div>
               <div class="property-gallery">
-                <img id="imgPrincipal" src="${imagenPrincipal}" alt="${p.titulo}" onerror="this.src='/img/default.jpg'">
+                <img id="imgPrincipal" src="${imagenPrincipal}" alt="${tituloSeguro}" onerror="this.src='/img/default.jpg'">
               </div>
               ${galeriaHTML}
 
@@ -128,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                   <h2 style="font-size:var(--fs-title-medium);">Descripción</h2>
                 </div>
                 <div class="admin-card-body">
-                  <p style="color:var(--neutral-40);font-size:var(--fs-body-large);line-height:1.8;">${p.descripcion || 'Sin descripción disponible.'}</p>
+                  <p style="color:var(--neutral-40);font-size:var(--fs-body-large);line-height:1.8;">${window.escapeHtmlForHtml(p.descripcion || 'Sin descripción disponible.')}</p>
                 </div>
               </div>
 
@@ -138,45 +144,45 @@ document.addEventListener('DOMContentLoaded', async () => {
             <!-- Info Card -->
             <div>
               <div class="property-info-card">
-                <span class="tag ${operacion === 'arriendo' ? 'green' : ''}" style="margin-bottom:16px;">${etiquetaOperacion} · ${(p.tipo || 'otro').charAt(0).toUpperCase() + (p.tipo || 'otro').slice(1)}</span>
+                <span class="tag ${operacion === 'arriendo' ? 'green' : ''}" style="margin-bottom:16px;">${etiquetaOperacion} · ${window.escapeHtmlForHtml(p.tipo || 'otro')}</span>
                 ${enProceso ? '<span class="tag" style="display:table;margin:-8px 0 16px;background:#FFF7ED;color:#9A3412;">En proceso</span>' : ''}
-                <h1 style="font-size:var(--fs-headline-small);color:var(--neutral-10);margin-bottom:8px;line-height:1.3;">${p.titulo}</h1>
+                <h1 style="font-size:var(--fs-headline-small);color:var(--neutral-10);margin-bottom:8px;line-height:1.3;">${tituloSeguro}</h1>
 
                 ${locationStr ? `
                   <div style="display:flex;align-items:center;gap:6px;color:var(--neutral-60);font-size:var(--fs-body-medium);margin-bottom:16px;">
                     <span class="material-symbols-rounded" style="font-size:1.8rem;color:var(--primary-100);">location_on</span>
-                    ${locationStr}
+                    ${window.escapeHtmlForHtml(locationStr)}
                   </div>` : ''}
 
-                <p style="font-size:3.2rem;font-weight:700;color:var(--primary-100);margin-bottom:24px;">$${p.precio.toLocaleString('es-CO')}</p>
+                <p style="font-size:3.2rem;font-weight:700;color:var(--primary-100);margin-bottom:24px;">$${precioSeguro}</p>
 
                 <div class="property-features-list">
                   <div class="property-feature">
                     <span class="material-symbols-rounded">bed</span>
-                    <div><strong>${p.habitaciones}</strong><span>Habitaciones</span></div>
+                    <div><strong>${Number(p.habitaciones) || 0}</strong><span>Habitaciones</span></div>
                   </div>
                   <div class="property-feature">
                     <span class="material-symbols-rounded">bathroom</span>
-                    <div><strong>${p.wc}</strong><span>Baños</span></div>
+                    <div><strong>${Number(p.wc) || 0}</strong><span>Baños</span></div>
                   </div>
                   <div class="property-feature">
                     <span class="material-symbols-rounded">directions_car</span>
-                    <div><strong>${p.estacionamiento}</strong><span>Parqueadero(s)</span></div>
+                    <div><strong>${Number(p.estacionamiento) || 0}</strong><span>Parqueadero(s)</span></div>
                   </div>
-                  ${p.metrosCuadrados ? `
+                  ${Number(p.metrosCuadrados) > 0 ? `
                   <div class="property-feature">
                     <span class="material-symbols-rounded">square_foot</span>
-                    <div><strong>${p.metrosCuadrados} m²</strong><span>Área</span></div>
+                    <div><strong>${Number(p.metrosCuadrados)} m²</strong><span>Área</span></div>
                   </div>` : ''}
                   ${p.ciudad ? `
                   <div class="property-feature">
                     <span class="material-symbols-rounded">location_city</span>
-                    <div><strong>${p.ciudad}</strong><span>Ciudad</span></div>
+                    <div><strong>${window.escapeHtmlForHtml(p.ciudad)}</strong><span>Ciudad</span></div>
                   </div>` : ''}
                   ${p.barrio ? `
                   <div class="property-feature">
                     <span class="material-symbols-rounded">home_pin</span>
-                    <div><strong>${p.barrio}</strong><span>Barrio</span></div>
+                    <div><strong>${window.escapeHtmlForHtml(p.barrio)}</strong><span>Barrio</span></div>
                   </div>` : ''}
                 </div>
 
@@ -246,7 +252,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const mapEl = document.getElementById('mapaPropiedad');
         if (!mapEl || !window.L) return;
 
-        const mapa = L.map('mapaPropiedad', { scrollWheelZoom: false }).setView([p.latitud, p.longitud], 16);
+        const mapa = L.map('mapaPropiedad', { scrollWheelZoom: false })
+          .setView([latitud, longitud], 16);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -273,9 +280,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           .addTo(mapa)
           .bindPopup(`
             <div style="font-family:Montserrat,sans-serif;min-width:180px;">
-              <strong style="font-size:1.4rem;">${p.titulo}</strong><br>
-              ${p.barrio ? `<span style="color:#666;font-size:1.2rem;">${p.barrio}${p.ciudad ? ', ' + p.ciudad : ''}</span><br>` : ''}
-              <span style="color:#2179FF;font-weight:700;font-size:1.3rem;">$${p.precio.toLocaleString('es-CO')}</span>
+              <strong style="font-size:1.4rem;">${tituloSeguro}</strong><br>
+              ${p.barrio ? `<span style="color:#666;font-size:1.2rem;">${window.escapeHtmlForHtml(p.barrio)}${p.ciudad ? ', ' + window.escapeHtmlForHtml(p.ciudad) : ''}</span><br>` : ''}
+              <span style="color:#2179FF;font-weight:700;font-size:1.3rem;">$${precioSeguro}</span>
             </div>
           `, { maxWidth: 220 })
           .openPopup();

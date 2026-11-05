@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="/js/tema.js"></script>
+  <script src="/js/csrf.js"></script>
+  <script src="/js/html-seguro.js"></script>
   <title>Propiedades | Admin Bienes Raíces</title>
   <link rel="shortcut icon" href="/img/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -209,26 +211,31 @@ async function cargarPropiedades() {
         tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><span class="material-symbols-rounded">home</span><h3>Sin resultados</h3><p>No hay propiedades que coincidan</p></div></td></tr>';
         return;
       }
-      tbody.innerHTML = lista.map(p => `
+      tbody.innerHTML = lista.map(p => {
+        const id = escaparHtml(p.id);
+        const imagen = escaparHtml(window.safeMediaUrl(
+          Array.isArray(p.imagenes) && p.imagenes.length > 0 ? p.imagenes[0] : '/img/default.jpg'
+        ));
+        const precio = Number(p.precio);
+        return `
         <tr>
           <td>
             <div style="display:flex;align-items:center;gap:14px;">
-              <img src="${(p.imagenes && p.imagenes.length > 0) ? p.imagenes[0] : '/img/default.jpg'}"
-                   alt="${p.titulo}" class="table-img">
+              <img src="${imagen}" alt="${escaparHtml(p.titulo)}" class="table-img">
               <div>
-                <div class="table-property-name">${p.titulo}</div>
-                <div class="table-property-desc">${p.descripcion || '–'}</div>
+                <div class="table-property-name">${escaparHtml(p.titulo)}</div>
+                <div class="table-property-desc">${escaparHtml(p.descripcion || '–')}</div>
               </div>
             </div>
           </td>
-          <td><span class="table-price">$${p.precio.toLocaleString('es-CO')}</span></td>
+          <td><span class="table-price">${Number.isFinite(precio) ? `$${precio.toLocaleString('es-CO')}` : ''}</span></td>
           <td>
             <div style="display:flex;gap:14px;align-items:center;font-size:var(--fs-label-medium);color:var(--neutral-50);">
-              <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.8rem;color:var(--primary-100);">bed</span>${p.habitaciones}</span>
-              <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.8rem;color:var(--primary-100);">bathroom</span>${p.wc}</span>
-              <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.8rem;color:var(--primary-100);">directions_car</span>${p.estacionamiento}</span>
-              <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.8rem;color:var(--primary-100);">directions_car</span>${p.estacionamiento}</span>
-              <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.8rem;color:var(--primary-100);">square_foot</span>${p.metrosCuadrados}</span>
+              <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.8rem;color:var(--primary-100);">bed</span>${Number(p.habitaciones) || 0}</span>
+              <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.8rem;color:var(--primary-100);">bathroom</span>${Number(p.wc) || 0}</span>
+              <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.8rem;color:var(--primary-100);">directions_car</span>${Number(p.estacionamiento) || 0}</span>
+              <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.8rem;color:var(--primary-100);">directions_car</span>${Number(p.estacionamiento) || 0}</span>
+              <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.8rem;color:var(--primary-100);">square_foot</span>${Number(p.metrosCuadrados) || 0}</span>
             </div>
           </td>
           <td>
@@ -239,7 +246,7 @@ async function cargarPropiedades() {
           </td>
           <td>
             <div style="display:flex;gap:8px;align-items:center;min-width:240px;">
-              <select class="form-control" data-owner-select="${escaparHtml(p.id)}" aria-label="Propietario de ${escaparHtml(p.titulo)}">
+              <select class="form-control" data-owner-select="${id}" aria-label="Propietario de ${escaparHtml(p.titulo)}">
                 <option value="">Sin asignar</option>
                 ${propietarios.map(propietario => `
                   <option value="${escaparHtml(propietario.id)}" ${p.propietarioId === propietario.id ? 'selected' : ''}>
@@ -247,29 +254,36 @@ async function cargarPropiedades() {
                   </option>
                 `).join('')}
               </select>
-              <button type="button" class="btn btn-outline btn-sm" data-save-owner="${escaparHtml(p.id)}" title="Guardar propietario" aria-label="Guardar propietario">
+              <button type="button" class="btn btn-outline btn-sm" data-save-owner="${id}" title="Guardar propietario" aria-label="Guardar propietario">
                 <span class="material-symbols-rounded" style="font-size:1.6rem;">save</span>
               </button>
             </div>
           </td>
           <td>
             <div class="table-actions" style="justify-content:flex-end;">
-              <a href="/admin/actualizar.html?id=${p.id}" class="btn btn-outline btn-sm" title="Editar">
+              <a href="/admin/actualizar.html?id=${encodeURIComponent(String(p.id ?? ''))}" class="btn btn-outline btn-sm" title="Editar">
                 <span class="material-symbols-rounded" style="font-size:1.6rem;">edit</span>
               </a>
-              <button onclick="pedirToggle('${p.id}')" class="btn btn-sm ${p.visible ? 'btn-yellow' : 'btn-fill'}" title="${p.visible ? 'Ocultar' : 'Publicar'}">
+              <button data-property-action="visibilidad" data-property-id="${id}" class="btn btn-sm ${p.visible ? 'btn-yellow' : 'btn-fill'}" title="${p.visible ? 'Ocultar' : 'Publicar'}">
                 <span class="material-symbols-rounded" style="font-size:1.6rem;">${p.visible ? 'visibility_off' : 'visibility'}</span>
               </button>
-              <button onclick="pedirEliminar('${p.id}')" class="btn btn-danger btn-sm" title="Eliminar">
+              <button data-property-action="eliminar" data-property-id="${id}" class="btn btn-danger btn-sm" title="Eliminar">
                 <span class="material-symbols-rounded" style="font-size:1.6rem;">delete</span>
               </button>
             </div>
           </td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
 
       tbody.querySelectorAll('[data-save-owner]').forEach(button => {
         button.addEventListener('click', () => guardarPropietario(button.dataset.saveOwner));
+      });
+      tbody.querySelectorAll('[data-property-action="visibilidad"]').forEach(button => {
+        button.addEventListener('click', () => pedirToggle(button.dataset.propertyId));
+      });
+      tbody.querySelectorAll('[data-property-action="eliminar"]').forEach(button => {
+        button.addEventListener('click', () => pedirEliminar(button.dataset.propertyId));
       });
     }
 
@@ -307,7 +321,7 @@ async function cargarPropiedades() {
     // Toggle visibility
     async function pedirToggle(id) {
       try {
-        const res = await fetch(`/api/propiedades/${id}/visibilidad`, { method: 'PATCH' });
+        const res = await fetch(`/api/propiedades/${encodeURIComponent(id)}/visibilidad`, { method: 'PATCH' });
         if (!res.ok) throw new Error();
         await cargarPropiedades();
       } catch { alert('Error al cambiar visibilidad'); }
@@ -325,7 +339,7 @@ async function cargarPropiedades() {
     document.getElementById('confirmarEliminar').addEventListener('click', async () => {
       if (!idAEliminar) return;
       try {
-        const res = await fetch(`/api/propiedades/${idAEliminar}`, { method: 'DELETE' });
+        const res = await fetch(`/api/propiedades/${encodeURIComponent(idAEliminar)}`, { method: 'DELETE' });
         if (!res.ok) throw new Error();
         document.getElementById('modalEliminar').style.display = 'none';
         idAEliminar = null;

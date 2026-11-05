@@ -2,7 +2,7 @@ package com.example.inmobiliaria.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -12,6 +12,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
@@ -23,27 +25,21 @@ import org.springframework.http.HttpStatus;
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
+    private final boolean secureCookies;
 
-    public SecurityConfig(CustomUserDetailsService userDetailsService) {
+    public SecurityConfig(CustomUserDetailsService userDetailsService,
+                          @Value("${server.servlet.session.cookie.secure:false}") boolean secureCookies) {
         this.userDetailsService = userDetailsService;
-    }
-
-    @Bean
-    @Order(1)
-    public SecurityFilterChain chatSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .securityMatcher(new AntPathRequestMatcher("/api/v2/chat**"))
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
-
-        return http.build();
+        this.secureCookies = secureCookies;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf
+                .csrfTokenRepository(csrfTokenRepository(secureCookies))
+                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
 
             .authorizeHttpRequests(auth -> auth
                 // Login ADMIN (PÚBLICO)
@@ -57,6 +53,7 @@ public class SecurityConfig {
 
                    .requestMatchers(HttpMethod.POST, "/api/cuenta/registro").permitAll()
                    .requestMatchers("/api/cuenta/**").authenticated()
+                   .requestMatchers("/api/csrf").permitAll()
 
                 // Páginas públicas
                 .requestMatchers(
@@ -81,13 +78,16 @@ public class SecurityConfig {
                       "/api/prediccion/**"
                  ).permitAll()
 
-                        .requestMatchers(new AntPathRequestMatcher("/api/v2/chat**", "POST")).permitAll()
-                        .requestMatchers(new AntPathRequestMatcher("/api/v2/chat/salud", "GET")).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v2/chat", "/api/v2/chat/rapido").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v2/chat/salud").permitAll()
 
-                    .requestMatchers(HttpMethod.GET, "/api/propiedades/**", "/api/imagenes/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/propiedades/visibles", "/api/propiedades/*").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/imagenes/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/propiedades/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.GET, "/api/testimonios/visibles").permitAll()
                     .requestMatchers("/api/testimonios/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.POST, "/api/contacto").permitAll()
+                    .requestMatchers("/api/contacto/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.POST, "/api/propiedades/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.PUT, "/api/propiedades/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.PATCH, "/api/propiedades/**").hasRole("ADMIN")
@@ -142,6 +142,15 @@ public class SecurityConfig {
             );
 
         return http.build();
+    }
+
+    CookieCsrfTokenRepository csrfTokenRepository(boolean secure) {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieCustomizer(cookie -> cookie
+                .path("/")
+                .secure(secure)
+                .sameSite("Lax"));
+        return repository;
     }
 
     AuthenticationSuccessHandler loginSuccessHandler() {

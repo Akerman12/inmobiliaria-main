@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="/js/tema.js"></script>
+  <script src="/js/csrf.js"></script>
   <title>Contacto | Bienes Raíces</title>
   <link rel="shortcut icon" href="/img/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -108,15 +109,15 @@
               <div class="form-grid">
                 <div class="form-group">
                   <label class="form-label" for="nombre">Nombre completo *</label>
-                  <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Tu nombre" autocomplete="off" required>
+                  <input type="text" id="nombre" name="nombre" class="form-control" maxlength="100" placeholder="Tu nombre" autocomplete="off" required>
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="email">Correo electrónico *</label>
-                  <input type="email" id="email" name="email" class="form-control" placeholder="correo@ejemplo.com" autocomplete="off" required>
+                  <input type="email" id="email" name="email" class="form-control" maxlength="254" placeholder="correo@ejemplo.com" autocomplete="off" required>
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="telefono">Teléfono / Celular</label>
-                  <input type="tel" id="telefono" name="telefono" class="form-control" placeholder="+57 300 000 0000" autocomplete="off">
+                  <input type="tel" id="telefono" name="telefono" class="form-control" maxlength="30" placeholder="+57 300 000 0000" autocomplete="off">
                 </div>
                 <div class="form-group">
                   <label class="form-label" for="propiedad">Propiedad de interés</label>
@@ -126,7 +127,7 @@
                 </div>
                 <div class="form-group full">
                   <label class="form-label" for="mensaje">Mensaje *</label>
-                  <textarea id="mensaje" name="mensaje" class="form-control" rows="4" placeholder="Cuéntanos qué estás buscando..." required></textarea>
+                  <textarea id="mensaje" name="mensaje" class="form-control" rows="4" maxlength="2000" placeholder="Cuéntanos qué estás buscando..." required></textarea>
                 </div>
                 <div class="form-group full">
                   <label class="form-label">Medio de contacto preferido</label>

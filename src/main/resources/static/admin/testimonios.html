@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="/js/tema.js"></script>
+  <script src="/js/csrf.js"></script>
+  <script src="/js/html-seguro.js"></script>
   <title>Testimonios | Admin Belar</title>
   <link rel="shortcut icon" href="/img/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -133,15 +135,15 @@
         <input type="hidden" id="testimonioId">
         <div class="form-group" style="margin-bottom:16px;">
           <label class="form-label" for="tNombre">Nombre *</label>
-          <input type="text" id="tNombre" class="form-control" required>
+          <input type="text" id="tNombre" class="form-control" maxlength="100" required>
         </div>
         <div class="form-group" style="margin-bottom:16px;">
           <label class="form-label" for="tRol">Rol / relación *</label>
-          <input type="text" id="tRol" class="form-control" placeholder="Ej: Cliente satisfecho, Compradora, Vendedor" required>
+          <input type="text" id="tRol" class="form-control" maxlength="100" placeholder="Ej: Cliente satisfecho, Compradora, Vendedor" required>
         </div>
         <div class="form-group" style="margin-bottom:16px;">
           <label class="form-label" for="tMensaje">Testimonio *</label>
-          <textarea id="tMensaje" class="form-control" rows="4" required></textarea>
+          <textarea id="tMensaje" class="form-control" rows="4" maxlength="2000" required></textarea>
         </div>
         <div class="form-group" style="margin-bottom:24px;">
           <label class="form-label">Calificación</label>
@@ -209,21 +211,29 @@
         tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><span class="material-symbols-rounded">reviews</span><h3>Sin testimonios</h3><p>Agrega el primero</p></div></td></tr>';
         return;
       }
-      tbody.innerHTML = lista.map(t => `
+      tbody.innerHTML = lista.map(t => {
+        const safe = window.escapeHtmlForHtml;
+        const estrellasValor = Number(t.estrellas);
+        const estrellas = Number.isInteger(estrellasValor) && estrellasValor >= 1 && estrellasValor <= 5
+          ? estrellasValor
+          : 5;
+        const id = safe(t.id);
+        const nombre = safe(t.nombre || '?');
+        return `
         <tr>
           <td>
             <div style="display:flex;align-items:center;gap:12px;">
               <div style="width:40px;height:40px;background:linear-gradient(135deg,var(--primary-100),var(--primary-70));border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--white);font-weight:700;flex-shrink:0;">
-                ${(t.nombre || '?').charAt(0).toUpperCase()}
+                ${nombre.charAt(0).toUpperCase()}
               </div>
               <div>
-                <div class="table-property-name">${t.nombre}</div>
-                <div class="table-property-desc">${t.rol || ''}</div>
+                <div class="table-property-name">${nombre}</div>
+                <div class="table-property-desc">${safe(t.rol)}</div>
               </div>
             </div>
           </td>
-          <td><span class="stars-preview">${'★'.repeat(t.estrellas || 5)}${'☆'.repeat(5 - (t.estrellas || 5))}</span></td>
-          <td><div class="table-property-desc" style="max-width:280px;">${t.mensaje || ''}</div></td>
+          <td><span class="stars-preview">${'★'.repeat(estrellas)}${'☆'.repeat(5 - estrellas)}</span></td>
+          <td><div class="table-property-desc" style="max-width:280px;">${safe(t.mensaje)}</div></td>
           <td>
             <span class="badge ${t.visible ? 'badge-green' : 'badge-gray'}">
               <span class="material-symbols-rounded" style="font-size:1.4rem;">${t.visible ? 'visibility' : 'visibility_off'}</span>
@@ -232,20 +242,31 @@
           </td>
           <td>
             <div class="table-actions" style="justify-content:flex-end;">
-              <button onclick="abrirEdicion('${t.id}')" class="btn btn-outline btn-sm" title="Editar">
+              <button data-testimonio-action="editar" data-testimonio-id="${id}" class="btn btn-outline btn-sm" title="Editar">
                 <span class="material-symbols-rounded" style="font-size:1.6rem;">edit</span>
               </button>
-              <button onclick="toggleVisibilidad('${t.id}')" class="btn btn-sm ${t.visible ? 'btn-yellow' : 'btn-fill'}" title="${t.visible ? 'Ocultar' : 'Mostrar'}">
+              <button data-testimonio-action="visibilidad" data-testimonio-id="${id}" class="btn btn-sm ${t.visible ? 'btn-yellow' : 'btn-fill'}" title="${t.visible ? 'Ocultar' : 'Mostrar'}">
                 <span class="material-symbols-rounded" style="font-size:1.6rem;">${t.visible ? 'visibility_off' : 'visibility'}</span>
               </button>
-              <button onclick="pedirEliminar('${t.id}')" class="btn btn-danger btn-sm" title="Eliminar">
+              <button data-testimonio-action="eliminar" data-testimonio-id="${id}" class="btn btn-danger btn-sm" title="Eliminar">
                 <span class="material-symbols-rounded" style="font-size:1.6rem;">delete</span>
               </button>
             </div>
           </td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
     }
+
+    document.getElementById('lista-testimonios').addEventListener('click', event => {
+      if (!(event.target instanceof Element)) return;
+      const boton = event.target.closest('button[data-testimonio-action]');
+      if (!boton) return;
+      const id = boton.dataset.testimonioId;
+      if (boton.dataset.testimonioAction === 'editar') abrirEdicion(id);
+      if (boton.dataset.testimonioAction === 'visibilidad') toggleVisibilidad(id);
+      if (boton.dataset.testimonioAction === 'eliminar') pedirEliminar(id);
+    });
 
     // ── Estrellas interactivas ──
     function pintarEstrellas(valor) {
@@ -319,7 +340,7 @@
     // ── Visibilidad ──
     async function toggleVisibilidad(id) {
       try {
-        const res = await fetch(`/api/testimonios/${id}/visibilidad`, { method: 'PATCH' });
+        const res = await fetch(`/api/testimonios/${encodeURIComponent(id)}/visibilidad`, { method: 'PATCH' });
         if (!res.ok) throw new Error();
         await cargarTestimonios();
       } catch { alert('Error al cambiar visibilidad'); }
@@ -337,7 +358,7 @@
     document.getElementById('confirmarEliminarTestimonio').addEventListener('click', async () => {
       if (!idAEliminar) return;
       try {
-        const res = await fetch(`/api/testimonios/${idAEliminar}`, { method: 'DELETE' });
+        const res = await fetch(`/api/testimonios/${encodeURIComponent(idAEliminar)}`, { method: 'DELETE' });
         if (!res.ok) throw new Error();
         document.getElementById('modalEliminarTestimonio').style.display = 'none';
         idAEliminar = null;

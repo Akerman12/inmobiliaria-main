@@ -125,12 +125,22 @@ La aplicación requiere Java 21 y MongoDB. Para publicarla, conecta el repositor
 
 En MongoDB Atlas, crea una base de producción separada, crea un usuario de base de datos con permisos mínimos y permite conexiones entrantes desde el proveedor de hosting. No uses `localhost` como URI de MongoDB desplegada: apuntaría al propio servidor. La URI contiene credenciales; guárdala solo como secreto del proveedor.
 
+El perfil `prod` activa `Secure` para la cookie de sesión. Las sesiones usan además `HttpOnly` y `SameSite=Lax`; las operaciones que modifican datos requieren token CSRF. La cookie `XSRF-TOKEN` no autentica al usuario y debe ser legible por el navegador para que el frontend pueda enviar ese token.
+
+### Seguridad y validaciones
+
+- Spring Security protege los portales y APIs por rol: `ADMIN`, `PROPIETARIO` y `CLIENTE`. Las lecturas administrativas de propiedades y contactos requieren `ADMIN`; el catálogo público solo entrega propiedades visibles y las fichas ocultas responden como no encontradas.
+- Las solicitudes que modifican datos requieren CSRF. El endpoint `GET /api/csrf` inicializa el token; `/js/csrf.js` lo añade a los `fetch` de escritura y a los formularios del mismo origen. No desactives CSRF para endpoints públicos como el chat o el formulario de contacto.
+- Los datos recibidos en contactos, testimonios, propiedades, mensajes de visitas y chat tienen límites y validaciones en el servidor. Las imágenes se limitan a 10 MB por archivo y solo se sirven como JPEG, PNG o WEBP.
+- Los valores dinámicos de la base se escapan al insertarse en HTML. `/js/html-seguro.js` centraliza el escape y valida las URLs de medios; no insertes datos de usuario con `innerHTML` sin escape contextual.
+- Las rutas CORS abiertas (`*`) se eliminaron. El frontend debe consumir las APIs del mismo origen.
+
 Antes de habilitar tráfico público:
 
 1. Provisiona una cuenta `ADMIN` segura en la base de producción; el perfil `prod` no crea usuarios automáticamente.
 2. Ejecuta las pruebas (`.\mvnw.cmd test` en Windows o `./mvnw test` en macOS/Linux).
 3. Configura el proveedor para compilar con Maven usando Java 21 y ejecutar el JAR Spring Boot generado en `target/`.
-4. Comprueba el acceso al sitio, login por rol, registro, subida/lectura de imágenes en GridFS y conexión con MongoDB.
+4. Comprueba login por rol, registro, permisos de APIs, envío de formularios con CSRF, cookies `Secure`/`HttpOnly`/`SameSite`, subida/lectura de imágenes en GridFS y conexión con MongoDB.
 
 Las imágenes subidas se guardan en GridFS, por lo que permanecen en MongoDB y no dependen del disco efímero del servidor.
 

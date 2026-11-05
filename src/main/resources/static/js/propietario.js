@@ -443,7 +443,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       return `
         <article class="recent-property">
-          <img class="recent-property-image" src="${escaparHtml(imagen)}" alt="" onerror="this.src='/img/default.jpg'">
+          <img class="recent-property-image" src="${escaparHtml(window.safeMediaUrl(imagen))}" alt="" onerror="this.src='/img/default.jpg'">
           <div>
             <div class="recent-property-name">${escaparHtml(propiedad.titulo || 'Propiedad sin título')}</div>
             <div class="recent-property-meta">${escaparHtml(propiedad.ciudad || 'Ubicación no especificada')} · ${propiedad.operacion === 'arriendo' ? 'Arriendo' : 'Venta'}</div>
@@ -495,7 +495,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       tarjeta.className = 'owner-property-card';
       tarjeta.innerHTML = `
         <div class="owner-property-image-wrap">
-          <img class="owner-property-image" src="${escaparHtml(imagen)}" alt="${escaparHtml(propiedad.titulo || 'Propiedad')}" onerror="this.src='/img/default.jpg'">
+          <img class="owner-property-image" src="${escaparHtml(window.safeMediaUrl(imagen))}" alt="${escaparHtml(propiedad.titulo || 'Propiedad')}" onerror="this.src='/img/default.jpg'">
           <span class="owner-property-operation">${propiedad.operacion === 'arriendo' ? 'Arriendo' : 'Venta'}</span>
         </div>
         <div class="owner-property-content">

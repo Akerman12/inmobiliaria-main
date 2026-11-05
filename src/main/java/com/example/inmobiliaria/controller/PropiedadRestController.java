@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
@@ -20,7 +22,6 @@ import com.example.inmobiliaria.repository.PropiedadRepository;
 
 @RestController
 @RequestMapping("/api/propiedades")
-@CrossOrigin(origins = "*")
 public class PropiedadRestController {
 
     private final PropiedadRepository repo;
@@ -38,8 +39,14 @@ public class PropiedadRestController {
     }
 
     @GetMapping("/{id}")
-    public Propiedad obtenerPorId(@PathVariable String id) {
-        return repo.findById(id).orElse(null);
+    public ResponseEntity<Propiedad> obtenerPorId(@PathVariable String id, Authentication authentication) {
+        Propiedad propiedad = repo.findById(id).orElse(null);
+        boolean esAdministrador = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        if (propiedad == null || (!propiedad.isVisible() && !esAdministrador)) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(propiedad);
     }
 
     @PostMapping(consumes = {"multipart/form-data"})
@@ -49,6 +56,7 @@ public class PropiedadRestController {
             @RequestPart(value = "imagen", required = false) MultipartFile imagen
     ) throws IOException {
 
+        validarPropiedad(propiedad);
         List<String> rutas = new ArrayList<>();
         MultipartFile[] archivos = normalizarImagenes(imagenes, imagen);
         propiedad.setId(new ObjectId().toHexString());
@@ -76,6 +84,7 @@ public class PropiedadRestController {
             @RequestPart(value = "imagen", required = false) MultipartFile imagen
     ) throws IOException {
 
+        validarPropiedad(nueva);
         Propiedad existente = repo.findById(id).orElse(null);
         if (existente == null) return null;
 
@@ -130,6 +139,47 @@ public class PropiedadRestController {
         if (archivos.length > 4) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Se permiten hasta 4 imágenes por propiedad.");
         }
+    }
+
+    private void validarPropiedad(Propiedad propiedad) {
+        if (propiedad == null
+                || !textoValido(propiedad.getTitulo(), 1, 150)
+                || !textoValido(propiedad.getDescripcion(), 1, 5000)
+                || !textoValido(propiedad.getDireccion(), 1, 200)
+                || !textoValido(propiedad.getCiudad(), 1, 100)
+                || !textoOpcionalValido(propiedad.getBarrio(), 100)
+                || !List.of("venta", "arriendo").contains(propiedad.getOperacion())
+                || !List.of("casa", "apartamento", "villa", "local", "terreno", "otro")
+                        .contains(propiedad.getTipo())
+                || !Double.isFinite(propiedad.getPrecio()) || propiedad.getPrecio() <= 0
+                || !Double.isFinite(propiedad.getMetrosCuadrados()) || propiedad.getMetrosCuadrados() <= 0
+                || propiedad.getHabitaciones() < 0 || propiedad.getHabitaciones() > 100
+                || propiedad.getWc() < 0 || propiedad.getWc() > 100
+                || propiedad.getEstacionamiento() < 0 || propiedad.getEstacionamiento() > 100
+                || !coordenadasValidas(propiedad.getLatitud(), propiedad.getLongitud())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Revisa los datos de la propiedad.");
+        }
+
+        propiedad.setTitulo(propiedad.getTitulo().trim());
+        propiedad.setDescripcion(propiedad.getDescripcion().trim());
+        propiedad.setDireccion(propiedad.getDireccion().trim());
+        propiedad.setCiudad(propiedad.getCiudad().trim());
+        propiedad.setBarrio(propiedad.getBarrio() == null ? "" : propiedad.getBarrio().trim());
+    }
+
+    private boolean textoValido(String valor, int minimo, int maximo) {
+        return valor != null && valor.trim().length() >= minimo && valor.trim().length() <= maximo;
+    }
+
+    private boolean textoOpcionalValido(String valor, int maximo) {
+        return valor == null || valor.trim().length() <= maximo;
+    }
+
+    private boolean coordenadasValidas(Double latitud, Double longitud) {
+        return (latitud == null && longitud == null)
+                || (latitud != null && longitud != null
+                && Double.isFinite(latitud) && latitud >= -90 && latitud <= 90
+                && Double.isFinite(longitud) && longitud >= -180 && longitud <= 180);
     }
 
     private void eliminarImagenes(List<String> imagenes) {

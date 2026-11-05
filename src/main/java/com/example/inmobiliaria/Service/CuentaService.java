@@ -134,7 +134,8 @@ public class CuentaService {
     }
 
     public List<String> actualizarFavoritos(String username, List<String> ids) {
-        if (ids == null || ids.stream().anyMatch(id -> id == null || id.isBlank())) {
+        if (ids == null || ids.size() > 100
+                || ids.stream().anyMatch(id -> id == null || id.isBlank() || id.length() > 100)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La lista de favoritos no es válida.");
         }
 

@@ -45,6 +45,7 @@ public class ImageStorageService {
 
     private static final int MAX_DIMENSION = 1600;
     private static final long MAX_PIXELS = 20_000_000L;
+    private static final long MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
     private static final float JPEG_QUALITY = 0.82f;
 
     private final GridFsTemplate gridFsTemplate;
@@ -73,6 +74,9 @@ public class ImageStorageService {
             throws IOException {
         if (upload == null || upload.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La imagen está vacía.");
+        }
+        if (upload.getSize() > MAX_UPLOAD_BYTES) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Cada imagen debe pesar 10 MB o menos.");
         }
 
         byte[] original = upload.getBytes();

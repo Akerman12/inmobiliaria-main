@@ -199,7 +199,7 @@ function _renderizarChips({ busqueda, operacion, tipo, ciudad, habitaciones, ban
   const agregar = (label, clearFn) => {
     const chip = document.createElement('span');
     chip.className = 'chip-filtro';
-    chip.innerHTML = `${label}<button title="Quitar filtro"><span class="material-symbols-rounded">close</span></button>`;
+    chip.innerHTML = `${window.escapeHtmlForHtml(label)}<button title="Quitar filtro"><span class="material-symbols-rounded">close</span></button>`;
     chip.querySelector('button').addEventListener('click', clearFn);
     wrapper.appendChild(chip);
   };
@@ -414,15 +414,24 @@ function renderizarPropiedades(lista, contenedor) {
 
   const idsFavoritos = new Set(window.BelarFavoritos.ids());
   contenedor.innerHTML = lista.map(p => {
-    const imagenUrl = (p.imagenes && p.imagenes.length > 0) ? p.imagenes[0] : '/img/default.jpg';
+    const imagenUrl = window.escapeHtmlForHtml(
+      window.safeMediaUrl(Array.isArray(p.imagenes) && p.imagenes.length > 0 ? p.imagenes[0] : '/img/default.jpg')
+    );
+    const id = encodeURIComponent(String(p.id ?? ''));
+    const titulo = window.escapeHtmlForHtml(p.titulo);
+    const ciudad = window.escapeHtmlForHtml(p.ciudad);
+    const barrio = window.escapeHtmlForHtml(p.barrio);
+    const descripcion = window.escapeHtmlForHtml(p.descripcion);
+    const precio = Number(p.precio);
+    const numero = value => Number.isFinite(Number(value)) ? Number(value) : 0;
     return `
       <div class="property-card">
         <div class="card-banner">
           <div class="img-holder" style="--width:4;--height:3;">
-            <img loading="lazy" src="${imagenUrl}" alt="${p.titulo}" class="img-cover" onerror="this.src='/img/default.jpg'">
+            <img loading="lazy" src="${imagenUrl}" alt="${titulo}" class="img-cover" onerror="this.src='/img/default.jpg'">
           </div>
           <span class="tag card-tag ${(p.operacion || 'venta') === 'arriendo' ? 'green' : ''}">${(p.operacion || 'venta') === 'arriendo' ? 'En Arriendo' : 'En Venta'}</span>
-          <button type="button" class="property-favorite-toggle" data-favorite-toggle="${p.id}"
+          <button type="button" class="property-favorite-toggle" data-favorite-toggle="${window.escapeHtmlForHtml(p.id)}"
             aria-pressed="${idsFavoritos.has(String(p.id))}"
             aria-label="${idsFavoritos.has(String(p.id)) ? 'Quitar de favoritos' : 'Guardar en favoritos'}"
             title="${idsFavoritos.has(String(p.id)) ? 'Quitar de favoritos' : 'Guardar en favoritos'}">
@@ -431,35 +440,35 @@ function renderizarPropiedades(lista, contenedor) {
         </div>
         <div class="card-body">
           <h3 class="card-title title-small">
-            <a href="/propiedad.html?id=${p.id}">${p.titulo}</a>
+            <a href="/propiedad.html?id=${id}">${titulo}</a>
           </h3>
           ${p.ciudad ? `
           <div style="display:flex;align-items:center;gap:4px;color:var(--neutral-60);font-size:var(--fs-label-medium);margin-bottom:8px;">
             <span class="material-symbols-rounded" style="font-size:1.6rem;color:var(--primary-100);">location_on</span>
-            ${[p.barrio, p.ciudad].filter(Boolean).join(', ')}
+            ${[barrio, ciudad].filter(Boolean).join(', ')}
           </div>` : ''}
-          <p class="card-desc">${p.descripcion || ''}</p>
-          <p class="card-price">$${p.precio.toLocaleString('es-CO')}</p>
+          <p class="card-desc">${descripcion}</p>
+          <p class="card-price">${Number.isFinite(precio) ? `$${precio.toLocaleString('es-CO')}` : ''}</p>
           <div class="card-features">
             <div class="card-feature-item">
               <span class="material-symbols-rounded">bed</span>
-              <span>${p.habitaciones} hab.</span>
+              <span>${numero(p.habitaciones)} hab.</span>
             </div>
             <div class="card-feature-item">
               <span class="material-symbols-rounded">bathroom</span>
-              <span>${p.wc} baños</span>
+              <span>${numero(p.wc)} baños</span>
             </div>
             <div class="card-feature-item">
               <span class="material-symbols-rounded">directions_car</span>
-              <span>${p.estacionamiento} parq.</span>
+              <span>${numero(p.estacionamiento)} parq.</span>
             </div>
-            ${p.metrosCuadrados ? `
+            ${numero(p.metrosCuadrados) ? `
             <div class="card-feature-item">
               <span class="material-symbols-rounded">square_foot</span>
-              <span>${p.metrosCuadrados} m²</span>
+              <span>${numero(p.metrosCuadrados)} m²</span>
             </div>` : ''}
           </div>
-          <a href="/propiedad.html?id=${p.id}" class="btn btn-fill" style="width:100%;justify-content:center;">
+          <a href="/propiedad.html?id=${id}" class="btn btn-fill" style="width:100%;justify-content:center;">
             <span class="material-symbols-rounded">visibility</span>
             Ver propiedad
           </a>

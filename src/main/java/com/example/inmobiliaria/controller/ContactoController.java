@@ -13,7 +13,6 @@ import com.example.inmobiliaria.repository.PropiedadRepository;
 
 @RestController
 @RequestMapping("/api/contacto")
-@CrossOrigin(origins = "*")
 public class ContactoController {
 
     private final ContactoRepository contactoRepository;
@@ -27,6 +26,26 @@ public class ContactoController {
     // Guardar contacto (público)
     @PostMapping
     public Contacto guardarContacto(@RequestBody Contacto contacto) {
+        if (contacto == null
+                || !textoValido(contacto.getNombre(), 2, 100)
+                || !correoValido(contacto.getCorreo())
+                || !textoValido(contacto.getMensaje(), 1, 2000)
+                || !textoOpcionalValido(contacto.getCelular(), 30)
+                || !telefonoValido(contacto.getCelular())
+                || !textoOpcionalValido(contacto.getCasaInteres(), 100)
+                || contacto.getMedioContacto() == null
+                || !List.of("correo", "telefono", "whatsapp").contains(contacto.getMedioContacto())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Revisa los datos del formulario de contacto.");
+        }
+
+        contacto.setNombre(contacto.getNombre().trim());
+        contacto.setCorreo(contacto.getCorreo().trim());
+        contacto.setMensaje(contacto.getMensaje().trim());
+        contacto.setCelular(contacto.getCelular() == null ? "" : contacto.getCelular().trim());
+        contacto.setCasaInteres(contacto.getCasaInteres() == null ? "" : contacto.getCasaInteres().trim());
+        contacto.setId(null);
+        contacto.setFechaCreacion(null);
+
         if (contacto.getCasaInteres() != null && !contacto.getCasaInteres().isBlank()) {
             Propiedad propiedad = propiedadRepository.findById(contacto.getCasaInteres())
                     .orElseThrow(() -> new ResponseStatusException(
@@ -39,6 +58,26 @@ public class ContactoController {
 
         contacto.setAtendido(false); // Siempre inicia como pendiente
         return contactoRepository.save(contacto);
+    }
+
+    private boolean textoValido(String valor, int minimo, int maximo) {
+        return valor != null && valor.trim().length() >= minimo && valor.trim().length() <= maximo;
+    }
+
+    private boolean textoOpcionalValido(String valor, int maximo) {
+        return valor == null || valor.trim().length() <= maximo;
+    }
+
+    private boolean correoValido(String correo) {
+        return textoValido(correo, 3, 254)
+                && correo.trim().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+    }
+
+    private boolean telefonoValido(String telefono) {
+        if (telefono == null || telefono.isBlank()) return true;
+        long digitos = telefono.chars().filter(Character::isDigit).count();
+        return telefono.length() <= 30 && telefono.matches("[0-9+() .-]+")
+                && digitos >= 7 && digitos <= 15;
     }
 
     // Listar todos (admin)

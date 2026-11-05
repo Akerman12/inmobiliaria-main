@@ -303,21 +303,92 @@ El campo `Usuario.rol` contiene uno de estos valores: `ADMIN`, `PROPIETARIO` o
 En `SecurityConfig.java`:
 
 ```java
-.requestMatchers(HttpMethod.POST, "/api/propiedades/**")
-    .hasRole("ADMIN")
-```
-
-Solo un usuario con ese rol puede crear propiedades.
-
-Las operaciones GET publicas se permiten:
-
-```java
-.requestMatchers(HttpMethod.GET,
-    "/api/propiedades/**", "/api/imagenes/**")
+.requestMatchers(HttpMethod.GET, "/api/propiedades/visibles", "/api/propiedades/*")
     .permitAll()
+.requestMatchers(HttpMethod.GET, "/api/propiedades/**")
+    .hasRole("ADMIN")
+.requestMatchers("/api/propietario/**").hasRole("PROPIETARIO")
+.requestMatchers("/api/cliente/**").hasRole("CLIENTE")
 ```
 
-El panel `/admin/**` requiere autenticacion.
+El orden de las reglas importa: primero se permiten solo el catalogo visible y
+las fichas individuales; despues, el resto de lecturas de propiedades queda
+para `ADMIN`. `PropiedadRestController` tambien devuelve `404` para una ficha
+oculta cuando quien consulta no es administrador. Las imagenes se pueden leer
+publicamente, pero la subida requiere `ADMIN`.
+
+Resumen de permisos principales:
+
+| Ruta | Permiso |
+| --- | --- |
+| `GET /api/propiedades/visibles` y `GET /api/propiedades/{id}` | Publico; la ficha oculta devuelve `404` |
+| Otras lecturas y cambios en `/api/propiedades/**` | `ADMIN` |
+| `GET /api/testimonios/visibles` | Publico |
+| Resto de `/api/testimonios/**` | `ADMIN` |
+| `POST /api/contacto` | Publico, con validacion en el servidor |
+| Listado y cambios en `/api/contacto/**` | `ADMIN` |
+| `/api/propietario/**` | `PROPIETARIO` |
+| `/api/cliente/**` | `CLIENTE` |
+| `GET /api/imagenes/**` | Publico; solo tipos de imagen permitidos |
+| `POST /api/imagenes/subir` y `/api/admin/**` | `ADMIN` |
+| `POST /api/cuenta/registro` | Publico; solo crea roles `CLIENTE` o `PROPIETARIO` |
+| `/admin/**`, `/propietario/**`, `/cliente/**` | Sus respectivos roles |
+| API de prediccion y endpoints POST del chat | Publicos y validados; igualmente protegidos con CSRF |
+
+Las rutas CORS con `origins = "*"` se retiraron. El frontend usa rutas relativas
+y consume las APIs desde el mismo origen.
+
+### Cookies de sesion y proteccion CSRF
+
+CSRF permanece habilitado en la cadena principal de Spring Security para
+peticiones que cambian estado (`POST`, `PUT`, `PATCH`, `DELETE`). Los endpoints
+publicos no estan exentos: publicar un contacto o enviar una pregunta al chat
+tambien requiere el token.
+
+`GET /api/csrf` devuelve el token y hace que Spring emita la cookie
+`XSRF-TOKEN`. `static/js/csrf.js` obtiene el token al necesitarlo, agrega la
+cabecera `X-XSRF-TOKEN` a `fetch` del mismo origen y agrega el campo `_csrf` a
+formularios HTML antes de enviarlos. El script debe cargarse antes de los
+scripts de pagina que envian escrituras. No registres el valor del token en
+consola ni lo incluyas en URLs.
+
+La cookie `XSRF-TOKEN` se configura con `SameSite=Lax` y sin `HttpOnly` porque
+el script del sitio necesita leer el token; **no es una credencial de sesion**.
+La cookie `JSESSIONID` es `HttpOnly` y `SameSite=Lax`. En desarrollo local,
+`server.servlet.session.cookie.secure=false` permite HTTP; el perfil `prod`
+activa `Secure=true`, por lo que el despliegue debe servirse por HTTPS. La
+estrategia de cabeceras reenviadas permite que Spring detecte el HTTPS terminado
+por el proxy del hosting.
+
+Antes de probar una escritura manualmente desde Thunder Client o una herramienta
+similar, solicita `GET /api/csrf`, conserva las cookies y envia el valor de
+`XSRF-TOKEN` en la cabecera `X-XSRF-TOKEN`. Un formulario o `fetch` sin token
+debe ser rechazado por Spring Security.
+
+### Validacion, carga de archivos y salida HTML
+
+Las validaciones del navegador mejoran la experiencia, pero los controladores y
+servicios vuelven a validar los datos: contactos limitan nombre, correo,
+telefono y mensaje; testimonios limitan nombre, rol, mensaje y estrellas;
+propiedades limitan campos, numeros, coordenadas y categorias; chat limita la
+pregunta y el dominio. Los mensajes de visita tienen un maximo de 1000
+caracteres. Los favoritos tienen un maximo de 100 elementos. No se debe confiar
+en valores `id`, estados, rol o banderas enviados por el cliente; el servidor
+impone sus valores y comprueba la propiedad/propietario correspondiente.
+
+Las subidas aceptan un maximo de 10 MB por imagen y el decodificador verifica
+que el contenido sea un formato compatible; no confies solo en la extension o
+en el `Content-Type` del navegador. Las respuestas de imagen limitan el tipo
+servido a JPEG, PNG o WEBP y agregan `X-Content-Type-Options: nosniff`.
+
+Para renderizar datos de MongoDB en HTML, usa salida codificada en el contexto
+correcto. `static/js/html-seguro.js` expone `escapeHtmlForHtml` y
+`safeMediaUrl`; los scripts que usan estas funciones cargan el helper antes.
+El escape HTML no valida URLs: usa `safeMediaUrl` para medios y no construyas
+atributos `href`, `src`, estilos o manejadores inline con datos no confiables.
+Para acciones sobre registros, prefiere atributos `data-*` y listeners a
+interpolar IDs en `onclick`. La codificacion al renderizar protege las vistas,
+pero no reemplaza la validacion al guardar los datos.
 
 ### Login y logout
 
@@ -415,6 +486,12 @@ crean en ejecuciones normales ni en produccion. No actives ese perfil al conecta
 Atlas. Provisiona las cuentas reales directamente en Atlas con contrasenas
 BCrypt. Cuentas demo que ya existan deben eliminarse manualmente despues de
 verificar que no tengan propiedades o visitas asociadas.
+
+No escribas URI de MongoDB, claves de Groq, contrasenas ni tokens en el
+repositorio o en logs. `.env.local` es solo para desarrollo y esta excluido de
+Git. En Render, configura `MONGODB_URI`, `SPRING_PROFILES_ACTIVE=prod` y, si
+usas el chat, `GROQ_API_KEY` como variables privadas. No actives el perfil `demo`
+en produccion.
 
 ## 10. Modelo predictivo con Weka
 
@@ -983,8 +1060,10 @@ Requisitos y comprobaciones previas:
    del proveedor. `GROQ_API_KEY` es opcional; se requiere solo para el chat.
 4. Construir el JAR con `.\mvnw.cmd clean package` o `./mvnw clean package` y
    ejecutar el artefacto `target/inmobiliaria-0.0.1-SNAPSHOT.jar`.
-5. Probar autenticacion por rol, registro, subida y lectura de imagenes,
-   visitas, consultas y persistencia MongoDB antes de habilitar trafico publico.
+5. Probar autenticacion por rol, permisos de APIs, registro, peticiones con y
+   sin token CSRF, cookies `Secure`/`HttpOnly`/`SameSite`, validacion de entradas,
+   subida y lectura de imagenes, visitas, consultas y persistencia MongoDB antes
+   de habilitar trafico publico.
 
 Para detener una ejecucion local iniciada desde terminal, pulsa `Ctrl+C` en
 esa terminal. En VS Code, usa el boton **Stop** de la sesion de depuracion.

@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="/js/tema.js"></script>
+  <script src="/js/csrf.js"></script>
+  <script src="/js/html-seguro.js"></script>
   <title>Contactos | Admin Belar</title>
   <link rel="shortcut icon" href="/img/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -287,7 +289,7 @@
     // ═══════════════════════════════════════════════════════════
     let todosContactos  = [];   // todos los contactos cargados
     let listaFiltrada   = [];   // resultado de búsqueda/filtro
-    let mapaPropiedades = {};
+    let mapaPropiedades = Object.create(null);
     let paginaActual    = 1;
     let porPagina       = 9;    // valor inicial del selector
 
@@ -427,8 +429,8 @@
 
       listaFiltrada = todosContactos.filter(c => {
         const coincideTexto = !q ||
-          c.nombre.toLowerCase().includes(q) ||
-          c.correo.toLowerCase().includes(q);
+          (c.nombre || '').toLowerCase().includes(q) ||
+          (c.correo || '').toLowerCase().includes(q);
         const coincideEstado =
           est === '' ? true :
           est === 'pendiente' ? !c.atendido :
@@ -520,10 +522,12 @@
 
       contenedor.innerHTML = lista.map(c => {
         const nombrePropiedad = mapaPropiedades[c.casaInteres] || 'No especificada';
-        const iniciales  = c.nombre ? c.nombre.charAt(0).toUpperCase() : '?';
+        const safe = window.escapeHtmlForHtml;
+        const iniciales  = safe(c.nombre ? c.nombre.charAt(0).toUpperCase() : '?');
         const iconoMedio = medioIconos[c.medioContacto] || 'contact_mail';
         const atendido   = c.atendido === true;
         const linkContacto = generarLinkContacto(c);
+        const id = safe(c.id);
 
         return `
           <div class="contact-card" style="border-left-color:${atendido ? 'var(--success)' : 'var(--primary-100)'};">
@@ -534,11 +538,11 @@
                 ${iniciales}
               </div>
               <div style="flex:1;min-width:0;">
-                <div class="contact-card-name">${c.nombre}</div>
+                <div class="contact-card-name">${safe(c.nombre)}</div>
                 <div class="contact-card-date" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px;">
                   <span class="badge badge-blue" style="display:inline-flex;align-items:center;gap:4px;">
                     <span class="material-symbols-rounded" style="font-size:1.4rem;">${iconoMedio}</span>
-                    ${c.medioContacto || 'correo'}
+                    ${safe(c.medioContacto || 'correo')}
                   </span>
                   <span class="badge ${atendido ? 'badge-green' : ''}"
                         style="${!atendido ? 'background:#FEF9C3;color:#A16207;' : ''}display:inline-flex;align-items:center;gap:4px;">
@@ -552,22 +556,22 @@
             <div class="contact-card-body">
               <div class="contact-card-row">
                 <span class="material-symbols-rounded">mail</span>
-                <span>${c.correo}</span>
+                <span>${safe(c.correo)}</span>
               </div>
               ${c.celular ? `
               <div class="contact-card-row">
                 <span class="material-symbols-rounded">phone</span>
-                <span>${c.celular}</span>
+                <span>${safe(c.celular)}</span>
               </div>` : ''}
               <div class="contact-card-row">
                 <span class="material-symbols-rounded">home</span>
-                <span>${nombrePropiedad}</span>
+                <span>${safe(nombrePropiedad)}</span>
               </div>
-              ${c.mensaje ? `<div class="contact-card-message">"${c.mensaje}"</div>` : ''}
+              ${c.mensaje ? `<div class="contact-card-message">"${safe(c.mensaje)}"</div>` : ''}
             </div>
 
             <div style="display:grid;grid-template-columns:minmax(0,1fr) 38px;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--neutral-95);">
-              <a href="${linkContacto.href}"
+              <a href="${safe(linkContacto.href)}"
                 target="${c.medioContacto === 'whatsapp' ? '_blank' : '_self'}"
                 rel="${c.medioContacto === 'whatsapp' ? 'noopener noreferrer' : ''}"
                 class="btn btn-sm ${linkContacto.disabled ? 'btn-outline' : 'btn-fill'}"
@@ -577,13 +581,13 @@
                 <span class="material-symbols-rounded" style="font-size:1.6rem;">${linkContacto.icono}</span>
                 ${linkContacto.texto}
               </a>
-              <button onclick="toggleAtendido('${c.id}')"
+              <button data-contact-action="atendido" data-contact-id="${id}"
                 class="btn btn-sm ${atendido ? 'btn-outline' : 'btn-fill'}"
                 style="grid-column:1;min-width:0;width:100%;justify-content:center;white-space:normal;">
                 <span class="material-symbols-rounded" style="font-size:1.6rem;">${atendido ? 'undo' : 'check_circle'}</span>
                 ${atendido ? 'Marcar pendiente' : 'Marcar atendido'}
               </button>
-              <button onclick="eliminarContacto('${c.id}')"
+              <button data-contact-action="eliminar" data-contact-id="${id}"
                 class="btn btn-danger btn-sm"
                 style="grid-column:2;grid-row:1 / span 2;width:38px;min-width:38px;padding:8px;justify-content:center;align-self:center;"
                 title="Eliminar mensaje">
@@ -596,12 +600,21 @@
       }).join('');
     }
 
+    document.getElementById('contenedor-contactos').addEventListener('click', event => {
+      if (!(event.target instanceof Element)) return;
+      const boton = event.target.closest('button[data-contact-action]');
+      if (!boton) return;
+      const id = boton.dataset.contactId;
+      if (boton.dataset.contactAction === 'atendido') toggleAtendido(id);
+      if (boton.dataset.contactAction === 'eliminar') eliminarContacto(id);
+    });
+
     // ═══════════════════════════════════════════════════════════
     //  ACCIONES
     // ═══════════════════════════════════════════════════════════
     async function toggleAtendido(id) {
       try {
-        const res = await fetch(`/api/contacto/${id}/atendido`, { method: 'PATCH' });
+        const res = await fetch(`/api/contacto/${encodeURIComponent(id)}/atendido`, { method: 'PATCH' });
         if (!res.ok) throw new Error();
         const idx = todosContactos.findIndex(c => c.id === id);
         if (idx !== -1) todosContactos[idx].atendido = !todosContactos[idx].atendido;
@@ -615,7 +628,7 @@
     async function eliminarContacto(id) {
       if (!confirm('¿Seguro que deseas eliminar este mensaje? Esta acción no se puede deshacer.')) return;
       try {
-        const res = await fetch(`/api/contacto/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/contacto/${encodeURIComponent(id)}`, { method: 'DELETE' });
         if (!res.ok) throw new Error();
         todosContactos = todosContactos.filter(c => c.id !== id);
         listaFiltrada  = listaFiltrada.filter(c => c.id !== id);

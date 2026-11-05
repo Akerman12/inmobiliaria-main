@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="/js/tema.js"></script>
+  <script src="/js/csrf.js"></script>
+  <script src="/js/html-seguro.js"></script>
   <title>Dashboard | Admin Bienes Raíces</title>
   <link rel="shortcut icon" href="/img/logo.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -248,24 +250,30 @@
           tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><span class="material-symbols-rounded">home</span><h3>Sin propiedades</h3><p>Crea tu primera propiedad</p></div></td></tr>';
           return;
         }
-        tbody.innerHTML = recientes.map(p => `
+        tbody.innerHTML = recientes.map(p => {
+          const safe = window.escapeHtmlForHtml;
+          const image = safe(window.safeMediaUrl(
+            Array.isArray(p.imagenes) && p.imagenes.length > 0 ? p.imagenes[0] : '/img/default.jpg'
+          ));
+          const precio = Number(p.precio);
+          const id = encodeURIComponent(String(p.id ?? ''));
+          return `
           <tr>
             <td>
               <div style="display:flex;align-items:center;gap:12px;">
-                <img src="${Array.isArray(p.imagenes) && p.imagenes.length > 0 ? p.imagenes[0] : '/img/default.jpg'}"
-                     alt="${p.titulo}" class="table-img">
+                <img src="${image}" alt="${safe(p.titulo)}" class="table-img">
                 <div>
-                  <div class="table-property-name">${p.titulo}</div>
-                  <div class="table-property-desc">${p.descripcion || ''}</div>
+                  <div class="table-property-name">${safe(p.titulo)}</div>
+                  <div class="table-property-desc">${safe(p.descripcion)}</div>
                 </div>
               </div>
             </td>
-            <td><span class="table-price">$${p.precio.toLocaleString('es-CO')}</span></td>
+            <td><span class="table-price">${Number.isFinite(precio) ? `$${precio.toLocaleString('es-CO')}` : ''}</span></td>
             <td>
               <div style="display:flex;gap:12px;align-items:center;font-size:var(--fs-label-medium);color:var(--neutral-50);">
-                <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.6rem;color:var(--primary-100);">bed</span>${p.habitaciones}</span>
-                <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.6rem;color:var(--primary-100);">bathroom</span>${p.wc}</span>
-                <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.6rem;color:var(--primary-100);">directions_car</span>${p.estacionamiento}</span>
+                <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.6rem;color:var(--primary-100);">bed</span>${Number(p.habitaciones) || 0}</span>
+                <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.6rem;color:var(--primary-100);">bathroom</span>${Number(p.wc) || 0}</span>
+                <span style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-rounded" style="font-size:1.6rem;color:var(--primary-100);">directions_car</span>${Number(p.estacionamiento) || 0}</span>
               </div>
             </td>
             <td>
@@ -276,13 +284,14 @@
             </td>
             <td>
               <div class="table-actions">
-                <a href="/admin/actualizar.html?id=${p.id}" class="btn btn-outline btn-sm">
+                <a href="/admin/actualizar.html?id=${id}" class="btn btn-outline btn-sm">
                   <span class="material-symbols-rounded" style="font-size:1.6rem;">edit</span>
                 </a>
               </div>
             </td>
           </tr>
-        `).join('');
+        `;
+        }).join('');
 
       } catch (err) {
         console.error('Error cargando dashboard:', err);

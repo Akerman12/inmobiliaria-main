@@ -16,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/api/imagenes")
-@CrossOrigin(origins = "*")
 public class ImagenController {
 
     private final ImageStorageService imageStorageService;
@@ -47,9 +46,13 @@ public class ImagenController {
         if (!StringUtils.hasText(contentType)) {
             contentType = file.getFilename().toLowerCase().endsWith(".webp") ? "image/webp" : "image/jpeg";
         }
+        if (!java.util.Set.of("image/jpeg", "image/png", "image/webp").contains(contentType.toLowerCase())) {
+            contentType = "image/jpeg";
+        }
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
+                .header("X-Content-Type-Options", "nosniff")
                 .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic())
                 .body(resource);
     }

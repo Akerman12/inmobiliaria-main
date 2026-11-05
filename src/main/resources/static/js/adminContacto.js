@@ -1,6 +1,9 @@
 document.addEventListener("DOMContentLoaded", async function () {
 
     const contenedor = document.getElementById("contenedor-contactos");
+    const escaparHtml = valor => String(valor ?? '').replace(/[&<>"']/g, caracter => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[caracter]);
 
     try {
 
@@ -13,7 +16,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         const propiedades = await resPropiedades.json();
 
         //  Crear mapa ID → Título
-        const mapaPropiedades = {};
+        const mapaPropiedades = Object.create(null);
         propiedades.forEach(p => {
             mapaPropiedades[p.id] = p.titulo;
         });
@@ -29,11 +32,11 @@ document.addEventListener("DOMContentLoaded", async function () {
             card.classList.add("card-contacto");
 
             card.innerHTML = `
-                <h3>${c.nombre}</h3>
-                <p><strong>Correo:</strong> ${c.correo}</p>
-                <p><strong>Celular:</strong> ${c.celular}</p>
-                <p><strong>Casa:</strong> ${nombrePropiedad}</p>
-                <div class="mensaje">${c.mensaje}</div>
+                <h3>${escaparHtml(c.nombre)}</h3>
+                <p><strong>Correo:</strong> ${escaparHtml(c.correo)}</p>
+                <p><strong>Celular:</strong> ${escaparHtml(c.celular)}</p>
+                <p><strong>Casa:</strong> ${escaparHtml(nombrePropiedad)}</p>
+                <div class="mensaje">${escaparHtml(c.mensaje)}</div>
             `;
 
             contenedor.appendChild(card);

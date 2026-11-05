@@ -13,7 +13,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/prediccion")
-@CrossOrigin(origins = "*")
 public class PrediccionController {
 
     private LinearRegression modeloEntrenado;

@@ -62,6 +62,9 @@ public class ClienteController {
         if (solicitud.fechaHora() == null || !solicitud.fechaHora().isAfter(LocalDateTime.now())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de visita debe ser futura");
         }
+        if (solicitud.mensaje() != null && solicitud.mensaje().trim().length() > 1000) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El mensaje no puede superar 1000 caracteres.");
+        }
 
         Propiedad propiedad = propiedadRepository.findById(solicitud.propiedadId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Propiedad no encontrada"));

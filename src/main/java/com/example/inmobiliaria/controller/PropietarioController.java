@@ -205,8 +205,18 @@ public class PropietarioController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Revisa el precio y las características.");
         }
         if (propiedad.getCiudad() == null || propiedad.getCiudad().isBlank()
-                || propiedad.getDireccion() == null || propiedad.getDireccion().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La ciudad y dirección son obligatorias.");
+                || propiedad.getCiudad().trim().length() > 100
+                || propiedad.getDireccion() == null || propiedad.getDireccion().isBlank()
+                || propiedad.getDireccion().trim().length() > 200
+                || (propiedad.getBarrio() != null && propiedad.getBarrio().trim().length() > 100)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Revisa la ciudad, dirección y barrio.");
+        }
+        if ((propiedad.getLatitud() == null) != (propiedad.getLongitud() == null)
+                || (propiedad.getLatitud() != null
+                && (!Double.isFinite(propiedad.getLatitud()) || propiedad.getLatitud() < -90
+                || propiedad.getLatitud() > 90 || !Double.isFinite(propiedad.getLongitud())
+                || propiedad.getLongitud() < -180 || propiedad.getLongitud() > 180))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Las coordenadas no son válidas.");
         }
     }
 

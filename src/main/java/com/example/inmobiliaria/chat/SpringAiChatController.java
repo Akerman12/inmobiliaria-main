@@ -6,7 +6,6 @@ import java.util.Map;
 import org.springframework.ai.retry.NonTransientAiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,7 +19,6 @@ import com.example.inmobiliaria.chat.ChatDatos.ChatResponse;
 
 @RestController
 @RequestMapping("/api/v2/chat")
-@CrossOrigin(origins = "*")
 @ConditionalOnExpression("T(org.springframework.util.StringUtils).hasText('${GROQ_API_KEY:}')")
 public class SpringAiChatController {
 
@@ -32,9 +30,13 @@ public class SpringAiChatController {
 
     @PostMapping
     public ResponseEntity<?> chat(@RequestBody ChatRequest request) {
+        if (request == null || !textoValido(request.pregunta(), 1, 2000)
+                || !textoOpcionalValido(request.dominio(), 80)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "La pregunta o el tema no son válidos."));
+        }
         try {
-            String respuesta = chatService.responder(request.pregunta(), request.dominio());
-            return ResponseEntity.ok(new ChatResponse(respuesta, chatService.getModelo(), request.dominio()));
+            String respuesta = chatService.responder(request.pregunta().trim(), limpiarOpcional(request.dominio()));
+            return ResponseEntity.ok(new ChatResponse(respuesta, chatService.getModelo(), limpiarOpcional(request.dominio())));
         } catch (NonTransientAiException exception) {
             return respuestaErrorGroq(exception);
         }
@@ -43,9 +45,12 @@ public class SpringAiChatController {
     @PostMapping("/rapido")
     public ResponseEntity<?> chatRapido(@RequestParam String pregunta,
                                         @RequestParam(required = false) String dominio) {
+        if (!textoValido(pregunta, 1, 2000) || !textoOpcionalValido(dominio, 80)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "La pregunta o el tema no son válidos."));
+        }
         try {
-            String respuesta = chatService.responder(pregunta, dominio);
-            return ResponseEntity.ok(new ChatResponse(respuesta, chatService.getModelo(), dominio));
+            String respuesta = chatService.responder(pregunta.trim(), limpiarOpcional(dominio));
+            return ResponseEntity.ok(new ChatResponse(respuesta, chatService.getModelo(), limpiarOpcional(dominio)));
         } catch (NonTransientAiException exception) {
             return respuestaErrorGroq(exception);
         }
@@ -72,6 +77,18 @@ public class SpringAiChatController {
                 : "Groq no pudo procesar la solicitud. Revisa los logs de la aplicación.";
 
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("error", mensaje));
+    }
+
+    private boolean textoValido(String valor, int minimo, int maximo) {
+        return valor != null && valor.trim().length() >= minimo && valor.trim().length() <= maximo;
+    }
+
+    private boolean textoOpcionalValido(String valor, int maximo) {
+        return valor == null || valor.trim().length() <= maximo;
+    }
+
+    private String limpiarOpcional(String valor) {
+        return valor == null ? null : valor.trim();
     }
 
     @GetMapping("/salud")
