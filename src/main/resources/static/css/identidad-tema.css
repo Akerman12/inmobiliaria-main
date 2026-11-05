@@ -74,6 +74,11 @@ html[data-theme="dark"] {
   background: var(--theme-page);
 }
 
+select option {
+  background-color: var(--theme-surface-raised);
+  color: var(--theme-text);
+}
+
 body {
   background: var(--theme-page);
   color: var(--theme-text);

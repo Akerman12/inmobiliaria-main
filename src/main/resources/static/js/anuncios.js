@@ -7,6 +7,14 @@ let _marcadoresMapa   = null;
 let _vistaCatalogo    = 'lista';
 const POR_PAGINA      = 6;
 
+function normalizarTextoFiltro(valor) {
+  return String(valor ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('es-CO')
+    .trim();
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   const contenedor = document.getElementById('lista-anuncios');
@@ -79,7 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (ciudadInicial) {
       const selectCiudad = document.getElementById('fCiudad');
       const opcion = Array.from(selectCiudad.options)
-        .find(o => o.value.toLowerCase() === ciudadInicial.toLowerCase());
+        .find(o => normalizarTextoFiltro(o.value) === normalizarTextoFiltro(ciudadInicial));
       if (opcion) selectCiudad.value = opcion.value;
     }
 
@@ -90,14 +98,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (operacionInicial) {
       const selectOperacion = document.getElementById('fOperacion');
       const opcion = Array.from(selectOperacion.options)
-        .find(o => o.value.toLowerCase() === operacionInicial.toLowerCase());
+        .find(o => normalizarTextoFiltro(o.value) === normalizarTextoFiltro(operacionInicial));
       if (opcion) selectOperacion.value = opcion.value;
     }
 
     if (tipoInicial) {
       const selectTipo = document.getElementById('fTipo');
       const opcion = Array.from(selectTipo.options)
-        .find(o => o.value.toLowerCase() === tipoInicial.toLowerCase());
+        .find(o => normalizarTextoFiltro(o.value) === normalizarTextoFiltro(tipoInicial));
       if (opcion) selectTipo.value = opcion.value;
     }
 
@@ -138,7 +146,7 @@ function _vincularFiltros() {
 
 // ─── Aplicar filtros ──────────────────────────────────────────────────────────
 function _aplicarFiltros() {
-  const busqueda     = document.getElementById('fBusqueda')?.value.trim().toLowerCase() || '';
+  const busqueda     = normalizarTextoFiltro(document.getElementById('fBusqueda')?.value);
   const operacion    = document.getElementById('fOperacion')?.value    || '';
   const tipo         = document.getElementById('fTipo')?.value         || '';
   const ciudad       = document.getElementById('fCiudad')?.value       || '';
@@ -147,14 +155,12 @@ function _aplicarFiltros() {
   const precioMax    = parseInt(document.getElementById('fPrecio')?.value)        || 0;
 
   _listaFiltrada = _todasPropiedades.filter(p => {
-    if (busqueda && !(
-      p.titulo?.toLowerCase().includes(busqueda) ||
-      p.descripcion?.toLowerCase().includes(busqueda) ||
-      p.barrio?.toLowerCase().includes(busqueda)
-    )) return false;
-    if (operacion    && (p.operacion || 'venta') !== operacion)      return false;
-    if (tipo         && (p.tipo || '').toLowerCase() !== tipo)       return false;
-    if (ciudad       && p.ciudad       !== ciudad)       return false;
+    if (busqueda && ![
+      p.titulo, p.descripcion, p.barrio, p.ciudad, p.direccion
+    ].some(valor => normalizarTextoFiltro(valor).includes(busqueda))) return false;
+    if (operacion && normalizarTextoFiltro(p.operacion || 'venta') !== normalizarTextoFiltro(operacion)) return false;
+    if (tipo && normalizarTextoFiltro(p.tipo || 'otro') !== normalizarTextoFiltro(tipo)) return false;
+    if (ciudad && normalizarTextoFiltro(p.ciudad) !== normalizarTextoFiltro(ciudad)) return false;
     if (habitaciones && p.habitaciones  < habitaciones)  return false;
     if (banos        && p.wc            < banos)         return false;
     if (precioMax    && p.precio        > precioMax)     return false;

@@ -368,12 +368,18 @@
     });
 
     function buscarPropiedades(e) {
-  e.preventDefault();
-  const ubicacion = document.getElementById('searchUbicacion').value.trim();
-  const params = new URLSearchParams();
-  if (ubicacion) params.set('busqueda', ubicacion);
-  window.location.href = '/anuncio.html' + (params.toString() ? '?' + params.toString() : '');
-}
+      e.preventDefault();
+      const operacion = document.getElementById('searchTipo').value;
+      const tipo = document.getElementById('searchCategoria').value;
+      const ubicacion = document.getElementById('searchUbicacion').value.trim();
+      const params = new URLSearchParams();
+
+      if (operacion) params.set('operacion', operacion);
+      if (tipo) params.set('tipo', tipo);
+      if (ubicacion) params.set('busqueda', ubicacion);
+
+      window.location.href = '/anuncio.html' + (params.toString() ? '?' + params.toString() : '');
+    }
   </script>
 </body>
 
