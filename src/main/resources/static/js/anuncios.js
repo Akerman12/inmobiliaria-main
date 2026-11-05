@@ -6,6 +6,9 @@ let _mapaCatalogo     = null;
 let _marcadoresMapa   = null;
 let _vistaCatalogo    = 'lista';
 const POR_PAGINA      = 6;
+const PALABRAS_COMUNES_BUSQUEDA = new Set([
+  'de', 'del', 'la', 'las', 'el', 'los', 'en', 'con', 'y', 'o', 'un', 'una', 'unos', 'unas', 'por', 'para'
+]);
 
 function normalizarTextoFiltro(valor) {
   return String(valor ?? '')
@@ -86,8 +89,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (ciudadInicial) {
       const selectCiudad = document.getElementById('fCiudad');
-      const opcion = Array.from(selectCiudad.options)
+      let opcion = Array.from(selectCiudad.options)
         .find(o => normalizarTextoFiltro(o.value) === normalizarTextoFiltro(ciudadInicial));
+      if (!opcion) {
+        opcion = document.createElement('option');
+        opcion.value = ciudadInicial;
+        opcion.textContent = ciudadInicial;
+        selectCiudad.appendChild(opcion);
+      }
       if (opcion) selectCiudad.value = opcion.value;
     }
 
@@ -147,6 +156,9 @@ function _vincularFiltros() {
 // ─── Aplicar filtros ──────────────────────────────────────────────────────────
 function _aplicarFiltros() {
   const busqueda     = normalizarTextoFiltro(document.getElementById('fBusqueda')?.value);
+  const palabrasBusqueda = busqueda
+    .split(/\s+/)
+    .filter(palabra => palabra && !PALABRAS_COMUNES_BUSQUEDA.has(palabra));
   const operacion    = document.getElementById('fOperacion')?.value    || '';
   const tipo         = document.getElementById('fTipo')?.value         || '';
   const ciudad       = document.getElementById('fCiudad')?.value       || '';
@@ -155,9 +167,10 @@ function _aplicarFiltros() {
   const precioMax    = parseInt(document.getElementById('fPrecio')?.value)        || 0;
 
   _listaFiltrada = _todasPropiedades.filter(p => {
-    if (busqueda && ![
-      p.titulo, p.descripcion, p.barrio, p.ciudad, p.direccion
-    ].some(valor => normalizarTextoFiltro(valor).includes(busqueda))) return false;
+    const textoPropiedad = normalizarTextoFiltro([
+      p.titulo, p.descripcion, p.barrio, p.ciudad, p.direccion, p.tipo, p.operacion
+    ].filter(Boolean).join(' '));
+    if (palabrasBusqueda.length && !palabrasBusqueda.every(palabra => textoPropiedad.includes(palabra))) return false;
     if (operacion && normalizarTextoFiltro(p.operacion || 'venta') !== normalizarTextoFiltro(operacion)) return false;
     if (tipo && normalizarTextoFiltro(p.tipo || 'otro') !== normalizarTextoFiltro(tipo)) return false;
     if (ciudad && normalizarTextoFiltro(p.ciudad) !== normalizarTextoFiltro(ciudad)) return false;

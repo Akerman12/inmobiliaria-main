@@ -768,6 +768,26 @@ const propiedades = await res.json();
 
 Despues filtra con `filter` y genera las tarjetas con `map`.
 
+### Busqueda desde el inicio y en el catalogo
+
+El formulario de `src/main/resources/static/index.html` envia la operacion y
+el tipo seleccionados como `operacion` y `tipo`, y el texto del campo **Ciudad**
+como `ciudad`. Estos parametros se aplican a sus filtros correspondientes en
+`anuncio.html`; la ciudad no se interpreta como texto de busqueda libre.
+
+El campo **¿Que estas buscando?** del catalogo usa el parametro `busqueda`.
+`src/main/resources/static/js/anuncios.js` compara cada palabra significativa
+escrita con el titulo, la descripcion, el barrio, la ciudad, la direccion, el
+tipo y la operacion de las propiedades visibles. Se deben encontrar todas las
+palabras para mostrar una propiedad. La comparacion ignora mayusculas y tildes,
+y omite palabras de enlace comunes como "de", "en" y "con". Es una busqueda
+local por texto; no interpreta el significado de una frase mediante
+inteligencia artificial.
+
+Por ejemplo, **Ciudad: Cartagena**, **Tipo: Apartamento** y **Operacion: Venta**
+filtran esos campos por separado. En cambio, **¿Que estas buscando?:
+apartamento con piscina** busca ambos terminos en los datos de cada propiedad.
+
 `crear.js` crea una propiedad con `FormData` porque envia datos y archivos:
 
 ```javascript

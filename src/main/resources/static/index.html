@@ -93,9 +93,9 @@
             <span class="material-symbols-rounded">apartment</span>
           </label>
           <label class="search-item">
-            <span class="label-medium label">Ubicación</span>
-            <input type="text" class="search-item-field body-medium" id="searchUbicacion"
-              placeholder="Ciudad o zona...">
+            <span class="label-medium label">Ciudad</span>
+            <input type="text" class="search-item-field body-medium" id="searchCiudad"
+              placeholder="Ej: Cartagena">
           </label>
           <button type="submit" class="btn btn-fill">
   <span class="material-symbols-rounded">search</span>
@@ -371,12 +371,12 @@
       e.preventDefault();
       const operacion = document.getElementById('searchTipo').value;
       const tipo = document.getElementById('searchCategoria').value;
-      const ubicacion = document.getElementById('searchUbicacion').value.trim();
+      const ciudad = document.getElementById('searchCiudad').value.trim();
       const params = new URLSearchParams();
 
       if (operacion) params.set('operacion', operacion);
       if (tipo) params.set('tipo', tipo);
-      if (ubicacion) params.set('busqueda', ubicacion);
+      if (ciudad) params.set('ciudad', ciudad);
 
       window.location.href = '/anuncio.html' + (params.toString() ? '?' + params.toString() : '');
     }
