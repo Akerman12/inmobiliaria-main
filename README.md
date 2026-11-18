@@ -6,13 +6,14 @@ Aplicación web de gestión inmobiliaria con Java 21, Spring Boot, Spring Securi
 
 - JDK 21.
 - URI de MongoDB configurada en `.env.local` para desarrollo local o en el entorno de despliegue.
-- La clave `GROQ_API_KEY` solo es necesaria para activar el chat de Groq. El resto de la aplicación puede iniciarse sin ella.
+- El chat de Groq es opcional: requiere `SPRING_AI_MODEL_CHAT=openai` y la clave `GROQ_API_KEY`. El resto de la aplicación puede iniciarse sin ambas variables.
 
 ## Ejecutar
 
 En Windows, desde PowerShell:
 
 ```powershell
+$env:SPRING_AI_MODEL_CHAT = "openai" # Opcional: activa el chat
 $env:GROQ_API_KEY = "tu_clave_de_groq" # Opcional: necesaria solo para el chat
 .\mvnw.cmd spring-boot:run
 ```
@@ -20,11 +21,12 @@ $env:GROQ_API_KEY = "tu_clave_de_groq" # Opcional: necesaria solo para el chat
 En macOS o Linux:
 
 ```bash
+export SPRING_AI_MODEL_CHAT="openai" # Opcional: activa el chat
 export GROQ_API_KEY="tu_clave_de_groq" # Opcional: necesaria solo para el chat
 ./mvnw spring-boot:run
 ```
 
-Sin configurar la clave, la web y el catálogo siguen disponibles; los endpoints de chat no se registran. La aplicación utiliza el puerto `8080`. La conexión MongoDB requiere `MONGODB_URI`; no hay una conexión de respaldo a `localhost`.
+Sin configurar `SPRING_AI_MODEL_CHAT=openai` y `GROQ_API_KEY`, la web y el catálogo siguen disponibles; los endpoints de chat no se registran. En VS Code, selecciona un JDK 21 para el proyecto Java. La aplicación utiliza el puerto `8080`. La conexión MongoDB requiere `MONGODB_URI`; no hay una conexión de respaldo a `localhost`.
 
 Para detener la aplicación iniciada desde la terminal, pulsa `Ctrl+C` en esa terminal. Si se ejecuta desde VS Code, usa el botón **Stop** de la sesión de depuración.
 
@@ -64,7 +66,6 @@ Para ejecutar las pruebas:
 - Acceso con Spring Security y rol `ADMIN`; las contraseñas se protegen con BCrypt.
 - Alta y edición de propiedades con operación, tipo, precio, características, ubicación e imágenes.
 - Gestión de visibilidad y administración de contactos.
-- Optimización de campañas publicitarias con programación lineal y el método Simplex. Desde **Optimizar promociones**, el administrador ingresa la comisión esperada, el gasto publicitario y las horas de asesor por campaña completa, además de los recursos disponibles.
 - Las tarjetas de contacto ofrecen una acción según el medio preferido: llamar, responder por correo o abrir WhatsApp con un mensaje preparado.
 - Los números de WhatsApp sin indicativo reciben el prefijo colombiano `57`; si falta el dato requerido, la acción aparece deshabilitada.
 - Las tarjetas conservan un ancho mínimo y ajustan textos largos y acciones para que permanezcan dentro de sus límites.
@@ -85,20 +86,6 @@ Ambos portales usan el mismo tema azul y ofrecen un selector persistente de modo
 
 La asignación se administra desde **Admin → Propiedades**. Selecciona una cuenta habilitada con rol `PROPIETARIO` en la columna **Propietario** y guarda el cambio. La propiedad almacena el ID de la cuenta en `propietarioId`; los mensajes y las solicitudes de visita se filtran con esa relación. También se puede elegir **Sin asignar**. Las propiedades creadas por el administrador quedan sin propietario hasta que se asignen desde esta pantalla.
 
-#### Modelo de optimización de promociones
-
-Para cada propiedad publicada, `xᵢ` es la intensidad de promoción recomendada, entre 0 (no promocionar) y 1 (ejecutar la campaña completa). Todos los valores económicos se expresan en millones de COP:
-
-```text
-Maximizar Z = Σ comisión esperadaᵢ × xᵢ
-Sujeto a:
-  Σ presupuesto de publicidadᵢ × xᵢ ≤ presupuesto disponible
-  Σ horas de asesorᵢ × xᵢ ≤ horas disponibles
-  0 ≤ xᵢ ≤ 1
-```
-
-La comisión esperada y los recursos requeridos por campaña completa son estimaciones ingresadas por el administrador; el sistema no presupone una tasa de comisión ni una probabilidad de cierre. La API protegida para administradores recibe el modelo en `POST /api/admin/optimizacion-promocion/simplex`.
-
 #### Consultas
 
 Los mensajes enviados desde el formulario público se guardan en MongoDB. En el portal del propietario, **Consultas** muestra solo los mensajes que hacen referencia a propiedades realmente asignadas a esa cuenta. Permite buscar por cliente, inmueble o texto del mensaje, filtrar entre pendientes y atendidas, y responder por correo o teléfono.
@@ -108,6 +95,25 @@ Los mensajes enviados desde el formulario público se guardan en MongoDB. En el 
 Desde el portal del cliente, **Solicitar visita** abre un formulario para elegir fecha y hora futuras y añadir un mensaje opcional. La solicitud se guarda en la colección `visitas` con la propiedad, el cliente y el propietario correspondiente. Las nuevas solicitudes quedan `SOLICITADA`; el propietario puede cambiarlas a `CONFIRMADA` o `RECHAZADA`, y marcar una visita confirmada como `COMPLETADA`. El cliente puede consultar el estado desde **Mis visitas**.
 
 Solo se admiten visitas para propiedades visibles, asignadas a un propietario y que no estén en `EN_PROCESO`. Ese estado también quita la propiedad del catálogo de clientes y deshabilita el contacto desde su ficha pública.
+
+#### Planificación matemática de visitas
+
+En **Propietario → Visitas**, cada propietario registra bloques disponibles de una hora, en horas exactas y hasta con 90 días de anticipación. El sistema solo considera las solicitudes de sus inmuebles y propone horarios iguales o posteriores a la fecha solicitada por el cliente. La propuesta no se guarda hasta que el propietario la confirma; al confirmarla, las visitas quedan programadas y confirmadas, y los bloques utilizados se reservan.
+
+Para cada solicitud `i` y horario `j`, `xᵢⱼ = 1` cuando se asigna la solicitud a ese horario y `0` en otro caso. El modelo maximiza primero la cantidad de solicitudes atendidas y, entre soluciones con la misma cantidad, minimiza los minutos de espera desde la solicitud hasta la visita:
+
+```text
+Maximizar M × Σᵢⱼ xᵢⱼ − Σᵢⱼ esperaᵢⱼ × xᵢⱼ
+Sujeto a:
+  Σⱼ xᵢⱼ ≤ 1 para cada solicitud
+  Σᵢ xᵢⱼ ≤ 1 para cada horario (bloques de una hora, sin cruces)
+  xᵢⱼ = 0 si el horario es anterior a la fecha solicitada
+  xᵢⱼ ∈ {0, 1}
+```
+
+`M` se elige mayor que la máxima espera acumulada posible, para que atender una solicitud adicional tenga prioridad sobre cualquier reducción de espera. La implementación resuelve el modelo de asignación con Simplex (Apache Commons Math); la estructura de emparejamiento solicitud-horario produce soluciones enteras para este modelo. La propuesta muestra cada fecha asignada, la espera por solicitud, el total de solicitudes atendidas y las que quedan sin horario compatible.
+
+La interfaz web se comunica con la API autenticada del propietario: `POST /api/propietario/visitas/disponibilidad` registra un bloque; `POST /api/propietario/visitas/planificar` calcula sin guardar cambios; y `POST /api/propietario/visitas/planificar/confirmar` valida de nuevo la propuesta óptima, programa las solicitudes y reserva los bloques en MongoDB. La API permite hasta 50 solicitudes y 50 horarios por cálculo. El cliente consulta la fecha programada desde **Mis visitas**.
 
 #### Cuentas de demostración
 
@@ -121,7 +127,8 @@ La aplicación requiere Java 21 y MongoDB. Para publicarla, conecta el repositor
 | --- | --- | --- |
 | `MONGODB_URI` | Sí | URI de MongoDB Atlas o de otra base accesible desde el servidor. |
 | `SPRING_PROFILES_ACTIVE` | Sí | Usa `prod`; las cuentas demo solo se crean con el perfil explícito `demo`. |
-| `GROQ_API_KEY` | No | Activa la API de chat; si se omite, el chat no se registra. |
+| `SPRING_AI_MODEL_CHAT` | No | Usa `openai` para activar el modelo de chat; por defecto está desactivado (`none`). |
+| `GROQ_API_KEY` | No | Clave de Groq; necesaria junto con `SPRING_AI_MODEL_CHAT=openai` para registrar la API de chat. |
 
 En MongoDB Atlas, crea una base de producción separada, crea un usuario de base de datos con permisos mínimos y permite conexiones entrantes desde el proveedor de hosting. No uses `localhost` como URI de MongoDB desplegada: apuntaría al propio servidor. La URI contiene credenciales; guárdala solo como secreto del proveedor.
 
@@ -156,11 +163,12 @@ Las propiedades guardadas antes de incorporar estos campos no contienen `operaci
 
 ## Chat de Groq
 
-La integración usa Spring AI con la API compatible con OpenAI de Groq. Configure `GROQ_API_KEY` en el entorno antes de iniciar la aplicación. El modelo configurado es `openai/gpt-oss-20b` y la URL base es `https://api.groq.com/openai`.
+La integración usa Spring AI con la API compatible con OpenAI de Groq. Configure `SPRING_AI_MODEL_CHAT=openai` y `GROQ_API_KEY` en el entorno antes de iniciar la aplicación. El modelo configurado es `openai/gpt-oss-20b` y la URL base es `https://api.groq.com/openai`.
 
 En Windows, desde PowerShell en la raíz del proyecto:
 
 ```powershell
+$env:SPRING_AI_MODEL_CHAT = "openai"
 $env:GROQ_API_KEY = "tu_clave_de_groq"
 .\mvnw.cmd spring-boot:run
 ```

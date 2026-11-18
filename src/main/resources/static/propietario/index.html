@@ -410,6 +410,23 @@
     .visit-management-actions button:hover { background:#f7fafc; }
     .visit-management-actions .confirm-visit { border-color:#b8e0cd; color:#137254; }
     .visit-management-actions .reject-visit { border-color:#edc5c5; color:#a33b3b; }
+    .visit-scheduling-section { margin-bottom:18px; }
+    .visit-scheduling-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; }
+    .visit-scheduling-form { display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px; }
+    .visit-scheduling-form label { display:grid; gap:6px; flex:1 1 220px; color:var(--neutral-50); font-size:1.2rem; font-weight:600; }
+    .visit-scheduling-form input { min-height:40px; padding:8px 10px; border:1px solid var(--neutral-90); border-radius:6px; background:white; color:#26384a; }
+    .availability-slots { display:grid; gap:8px; }
+    .availability-slot { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 12px; border:1px solid var(--neutral-95); border-radius:7px; color:#26384a; font-size:1.2rem; }
+    .availability-slot button { border:0; background:transparent; color:#a33b3b; cursor:pointer; font-weight:600; }
+    .schedule-formula { padding:14px 16px; border-radius:8px; background:#f3f7fa; color:#245e83; line-height:1.7; }
+    .schedule-formula code { display:block; white-space:normal; }
+    .schedule-message { margin:10px 0 0; color:var(--neutral-50); }
+    .schedule-message.error { color:#a33b3b; }
+    .schedule-result[hidden] { display:none; }
+    .schedule-result-summary { margin:12px 0; color:#137254; font-weight:700; }
+    .schedule-result-table { width:100%; overflow-x:auto; }
+    .schedule-result-table table { min-width:600px; }
+    @media (max-width: 760px) { .visit-scheduling-grid { grid-template-columns:1fr; } }
     .consultation-toolbar {
       display:flex;
       align-items:center;
@@ -859,7 +876,62 @@
       <section id="panel-visitas" class="owner-panel">
         <div class="owner-panel-header">
           <h2>Visitas</h2>
-          <p>Confirma o rechaza las solicitudes de recorrido para tus inmuebles.</p>
+          <p>Registra tus horarios disponibles y crea un plan de visitas para los inmuebles que tienes asignados.</p>
+        </div>
+        <div class="visit-scheduling-grid visit-scheduling-section">
+          <section class="owner-surface" aria-labelledby="horariosDisponiblesTitulo">
+            <div class="owner-surface-header">
+              <div>
+                <h2 id="horariosDisponiblesTitulo">Mis horarios disponibles</h2>
+                <p>Cada bloque dura una hora; registra horas exactas hasta con 90 días de anticipación.</p>
+              </div>
+            </div>
+            <div class="owner-surface-body">
+              <form id="formDisponibilidadVisita" class="visit-scheduling-form">
+                <label for="fechaDisponibilidad">Inicio del bloque (hora exacta)
+                  <input id="fechaDisponibilidad" name="fechaHora" type="datetime-local" step="3600" required>
+                </label>
+                <button type="submit" class="btn btn-primary"><span class="material-symbols-rounded">add</span>Agregar horario</button>
+              </form>
+              <p id="mensajeDisponibilidad" class="schedule-message" role="status" aria-live="polite" hidden></p>
+              <div id="listaDisponibilidades" class="availability-slots" aria-live="polite" style="margin-top:14px;">
+                <div class="owner-empty">Cargando horarios...</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="owner-surface" aria-labelledby="modeloVisitasTitulo">
+            <div class="owner-surface-header">
+              <div>
+                <h2 id="modeloVisitasTitulo">Planificación matemática</h2>
+                <p>El sistema asigna primero la mayor cantidad posible de solicitudes y luego reduce la espera.</p>
+              </div>
+            </div>
+            <div class="owner-surface-body">
+              <div class="schedule-formula" aria-label="Modelo de asignación de visitas">
+                <code>xᵢⱼ = 1 si la solicitud i se asigna al horario j; de lo contrario, 0.</code>
+                <code>Maximizar M × Σᵢⱼ xᵢⱼ − Σᵢⱼ esperaᵢⱼ × xᵢⱼ, con M mayor que la espera acumulada máxima.</code>
+                <code>Σⱼ xᵢⱼ ≤ 1 por solicitud; Σᵢ xᵢⱼ ≤ 1 por horario.</code>
+                <code>xᵢⱼ solo es posible si el horario pertenece al propietario y no precede la fecha solicitada.</code>
+              </div>
+              <p id="mensajePlanVisitas" class="schedule-message" role="status" aria-live="polite" hidden></p>
+              <button id="calcularPlanVisitas" type="button" class="btn btn-primary" style="margin-top:12px;">
+                <span class="material-symbols-rounded">functions</span>Calcular propuesta
+              </button>
+              <div id="resultadoPlanVisitas" class="schedule-result" hidden>
+                <p id="resumenPlanVisitas" class="schedule-result-summary"></p>
+                <div class="schedule-result-table">
+                  <table class="data-table">
+                    <thead><tr><th>Cliente / inmueble</th><th>Fecha solicitada</th><th>Propuesta</th><th>Espera</th></tr></thead>
+                    <tbody id="filasPlanVisitas"></tbody>
+                  </table>
+                </div>
+                <button id="confirmarPlanVisitas" type="button" class="btn btn-primary" style="margin:12px 0;">
+                  <span class="material-symbols-rounded">event_available</span>Confirmar propuesta
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
         <div class="owner-surface">
           <div class="owner-surface-header">

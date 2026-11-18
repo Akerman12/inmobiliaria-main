@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Service;
 
 @Service
-@ConditionalOnExpression("T(org.springframework.util.StringUtils).hasText('${GROQ_API_KEY:}')")
+@ConditionalOnExpression("'${SPRING_AI_MODEL_CHAT:none}' == 'openai' and T(org.springframework.util.StringUtils).hasText('${GROQ_API_KEY:}')")
 public class SpringAiChatService {
 
     private final ChatClient chatClient;

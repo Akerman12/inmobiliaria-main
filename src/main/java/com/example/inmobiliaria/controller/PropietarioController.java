@@ -1,9 +1,12 @@
 package com.example.inmobiliaria.controller;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.bson.types.ObjectId;
 import org.springframework.http.HttpStatus;
@@ -13,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,10 +27,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.inmobiliaria.Service.ImageStorageService;
+import com.example.inmobiliaria.Service.PlanificadorVisitasService;
+import com.example.inmobiliaria.model.DisponibilidadVisita;
+import com.example.inmobiliaria.model.PlanVisitas;
 import com.example.inmobiliaria.model.Propiedad;
 import com.example.inmobiliaria.model.Usuario;
 import com.example.inmobiliaria.model.Visita;
 import com.example.inmobiliaria.repository.ContactoRepository;
+import com.example.inmobiliaria.repository.DisponibilidadVisitaRepository;
 import com.example.inmobiliaria.repository.PropiedadRepository;
 import com.example.inmobiliaria.repository.UsuarioRepository;
 import com.example.inmobiliaria.repository.VisitaRepository;
@@ -39,18 +47,24 @@ public class PropietarioController {
     private final UsuarioRepository usuarioRepository;
     private final ContactoRepository contactoRepository;
     private final VisitaRepository visitaRepository;
+    private final DisponibilidadVisitaRepository disponibilidadVisitaRepository;
     private final ImageStorageService imageStorageService;
+    private final PlanificadorVisitasService planificadorVisitasService;
 
     public PropietarioController(PropiedadRepository propiedadRepository,
                                  UsuarioRepository usuarioRepository,
                                  ContactoRepository contactoRepository,
                                  VisitaRepository visitaRepository,
-                                 ImageStorageService imageStorageService) {
+                                 DisponibilidadVisitaRepository disponibilidadVisitaRepository,
+                                 ImageStorageService imageStorageService,
+                                 PlanificadorVisitasService planificadorVisitasService) {
         this.propiedadRepository = propiedadRepository;
         this.usuarioRepository = usuarioRepository;
         this.contactoRepository = contactoRepository;
         this.visitaRepository = visitaRepository;
+        this.disponibilidadVisitaRepository = disponibilidadVisitaRepository;
         this.imageStorageService = imageStorageService;
+        this.planificadorVisitasService = planificadorVisitasService;
     }
 
     @GetMapping("/propiedades")
@@ -141,6 +155,138 @@ public class PropietarioController {
         return visitaRepository.findByPropietarioIdOrderByFechaHoraAsc(propietario.getId());
     }
 
+    @GetMapping("/visitas/disponibilidad")
+    public List<DisponibilidadVisita> misHorariosDisponibles() {
+        Usuario propietario = usuarioActual();
+        return disponibilidadVisitaRepository.findByPropietarioIdAndFechaHoraAfterOrderByFechaHoraAsc(
+                propietario.getId(), LocalDateTime.now());
+    }
+
+    @PostMapping("/visitas/disponibilidad")
+    public ResponseEntity<DisponibilidadVisita> agregarHorarioDisponible(
+            @RequestBody SolicitudDisponibilidad solicitud) {
+        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime limite = ahora.plusDays(90);
+        if (solicitud == null || solicitud.fechaHora() == null
+                || !solicitud.fechaHora().isAfter(ahora)
+                || solicitud.fechaHora().isAfter(limite)
+                || solicitud.fechaHora().getMinute() != 0
+                || solicitud.fechaHora().getSecond() != 0
+                || solicitud.fechaHora().getNano() != 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El horario debe iniciar en una hora exacta futura, dentro de los próximos 90 días.");
+        }
+
+        Usuario propietario = usuarioActual();
+        if (disponibilidadVisitaRepository.existsByPropietarioIdAndFechaHora(
+                propietario.getId(), solicitud.fechaHora())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya registraste ese horario disponible.");
+        }
+
+        DisponibilidadVisita disponibilidad = new DisponibilidadVisita();
+        disponibilidad.setPropietarioId(propietario.getId());
+        disponibilidad.setFechaHora(solicitud.fechaHora());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(disponibilidadVisitaRepository.save(disponibilidad));
+    }
+
+    @DeleteMapping("/visitas/disponibilidad/{id}")
+    public ResponseEntity<Void> eliminarHorarioDisponible(@PathVariable String id) {
+        Usuario propietario = usuarioActual();
+        DisponibilidadVisita disponibilidad = disponibilidadVisitaRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Horario no encontrado."));
+        if (!propietario.getId().equals(disponibilidad.getPropietarioId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No puedes modificar un horario ajeno.");
+        }
+        if (disponibilidad.isReservada()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El horario ya está asignado a una visita.");
+        }
+        disponibilidadVisitaRepository.delete(disponibilidad);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/visitas/planificar")
+    public PlanVisitas planificarVisitas() {
+        Usuario propietario = usuarioActual();
+        LocalDateTime ahora = LocalDateTime.now();
+        List<Visita> visitas = visitaRepository.findByPropietarioIdOrderByFechaHoraAsc(propietario.getId());
+        Set<LocalDateTime> horasOcupadas = visitas.stream()
+                .filter(visita -> "CONFIRMADA".equalsIgnoreCase(visita.getEstado())
+                        || "COMPLETADA".equalsIgnoreCase(visita.getEstado()))
+                .map(visita -> visita.getFechaAsignada() == null
+                        ? visita.getFechaHora()
+                        : visita.getFechaAsignada())
+                .filter(fecha -> fecha != null && fecha.isAfter(ahora))
+                .collect(java.util.stream.Collectors.toSet());
+        List<DisponibilidadVisita> disponibles = disponibilidadVisitaRepository
+                .findByPropietarioIdAndReservadaFalseAndFechaHoraAfterOrderByFechaHoraAsc(
+                        propietario.getId(), ahora)
+                .stream()
+                .filter(horario -> !horasOcupadas.contains(horario.getFechaHora()))
+                .toList();
+        return planificadorVisitasService.planificar(visitas, disponibles);
+    }
+
+    @PostMapping("/visitas/planificar/confirmar")
+    public PlanVisitas confirmarPlan(@RequestBody PlanVisitas.Confirmacion confirmacion) {
+        if (confirmacion == null || confirmacion.asignaciones() == null
+                || confirmacion.asignaciones().isEmpty()
+                || confirmacion.asignaciones().size() > 50) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El plan no contiene asignaciones válidas.");
+        }
+
+        Usuario propietario = usuarioActual();
+        PlanVisitas planActual = planificarVisitas();
+        Set<String> asignacionesSolicitadas = new HashSet<>();
+        for (PlanVisitas.AsignacionConfirmada asignacion : confirmacion.asignaciones()) {
+            if (asignacion == null || asignacion.visitaId() == null
+                    || asignacion.disponibilidadId() == null
+                    || !asignacionesSolicitadas.add(asignacion.visitaId() + ":" + asignacion.disponibilidadId())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El plan contiene asignaciones duplicadas o inválidas.");
+            }
+        }
+        Set<String> asignacionesOptimas = planActual.asignaciones().stream()
+                .map(asignacion -> asignacion.visitaId() + ":" + asignacion.disponibilidadId())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!asignacionesSolicitadas.equals(asignacionesOptimas)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Las solicitudes o los horarios cambiaron. Calcula el plan nuevamente antes de confirmarlo.");
+        }
+
+        List<Map.Entry<Visita, DisponibilidadVisita>> registrosValidados = new ArrayList<>();
+        for (PlanVisitas.Asignacion asignacion : planActual.asignaciones()) {
+            Visita visita = visitaRepository.findById(asignacion.visitaId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Una solicitud ya no existe."));
+            DisponibilidadVisita horario = disponibilidadVisitaRepository.findById(asignacion.disponibilidadId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Un horario ya no existe."));
+            if (!propietario.getId().equals(visita.getPropietarioId())
+                    || !"SOLICITADA".equalsIgnoreCase(visita.getEstado())
+                    || !propietario.getId().equals(horario.getPropietarioId())
+                    || horario.isReservada()
+                    || !horario.getFechaHora().equals(asignacion.fechaAsignada())
+                    || horario.getFechaHora().isBefore(visita.getFechaHora())) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Una solicitud o un horario cambió. Calcula el plan nuevamente.");
+            }
+            registrosValidados.add(Map.entry(visita, horario));
+        }
+
+        for (Map.Entry<Visita, DisponibilidadVisita> registro : registrosValidados) {
+            Visita visita = registro.getKey();
+            DisponibilidadVisita horario = registro.getValue();
+            horario.setReservada(true);
+            disponibilidadVisitaRepository.save(horario);
+            visita.setFechaAsignada(horario.getFechaHora());
+            visita.setDisponibilidadId(horario.getId());
+            visita.setEstado("CONFIRMADA");
+            visitaRepository.save(visita);
+        }
+        return planActual;
+    }
+
     @PatchMapping("/visitas/{id}/estado")
     public ResponseEntity<Visita> actualizarEstadoVisita(
             @PathVariable String id,
@@ -162,6 +308,9 @@ public class PropietarioController {
         }
 
         visita.setEstado(nuevoEstado);
+        if ("CONFIRMADA".equals(nuevoEstado) && visita.getFechaAsignada() == null) {
+            visita.setFechaAsignada(visita.getFechaHora());
+        }
         return ResponseEntity.ok(visitaRepository.save(visita));
     }
 
@@ -288,4 +437,6 @@ public class PropietarioController {
         return usuarioRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no autenticado"));
     }
+
+    public record SolicitudDisponibilidad(LocalDateTime fechaHora) { }
 }

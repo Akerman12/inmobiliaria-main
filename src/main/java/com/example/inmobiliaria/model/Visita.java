@@ -18,6 +18,8 @@ public class Visita {
     private String clienteNombre;
     private String clienteEmail;
     private LocalDateTime fechaHora;
+    private LocalDateTime fechaAsignada;
+    private String disponibilidadId;
     private String mensaje;
     private String estado = "SOLICITADA";
 
@@ -47,6 +49,12 @@ public class Visita {
 
     public LocalDateTime getFechaHora() { return fechaHora; }
     public void setFechaHora(LocalDateTime fechaHora) { this.fechaHora = fechaHora; }
+
+    public LocalDateTime getFechaAsignada() { return fechaAsignada; }
+    public void setFechaAsignada(LocalDateTime fechaAsignada) { this.fechaAsignada = fechaAsignada; }
+
+    public String getDisponibilidadId() { return disponibilidadId; }
+    public void setDisponibilidadId(String disponibilidadId) { this.disponibilidadId = disponibilidadId; }
 
     public String getMensaje() { return mensaje; }
     public void setMensaje(String mensaje) { this.mensaje = mensaje; }

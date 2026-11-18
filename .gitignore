@@ -30,7 +30,8 @@ build/
 !**/src/test/**/build/
 
 ### VS Code ###
-.vscode/
+.vscode/*
+!.vscode/launch.json
 
 # Local-only secrets such as the Atlas URI used by Spring Boot
 .env.local

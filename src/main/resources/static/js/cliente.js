@@ -133,10 +133,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const titulo = document.createElement('h3');
         titulo.textContent = visita.propiedadTitulo || 'Propiedad';
         const fecha = document.createElement('p');
-        fecha.textContent = new Intl.DateTimeFormat('es-CO', {
+        fecha.textContent = `${visita.fechaAsignada ? 'Programada' : 'Solicitada'}: ${new Intl.DateTimeFormat('es-CO', {
           dateStyle: 'full',
           timeStyle: 'short'
-        }).format(new Date(visita.fechaHora));
+        }).format(new Date(visita.fechaAsignada || visita.fechaHora))}`;
         detalles.append(titulo, fecha);
 
         const estado = document.createElement('span');

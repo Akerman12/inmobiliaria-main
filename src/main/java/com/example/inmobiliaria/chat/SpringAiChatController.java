@@ -19,7 +19,7 @@ import com.example.inmobiliaria.chat.ChatDatos.ChatResponse;
 
 @RestController
 @RequestMapping("/api/v2/chat")
-@ConditionalOnExpression("T(org.springframework.util.StringUtils).hasText('${GROQ_API_KEY:}')")
+@ConditionalOnExpression("'${SPRING_AI_MODEL_CHAT:none}' == 'openai' and T(org.springframework.util.StringUtils).hasText('${GROQ_API_KEY:}')")
 public class SpringAiChatController {
 
     private final SpringAiChatService chatService;
