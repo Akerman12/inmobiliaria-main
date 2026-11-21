@@ -979,6 +979,38 @@ notificaciones por correo, no bloquea horarios ocupados ni sincroniza un
 calendario externo; la solicitud queda pendiente hasta que el propietario la
 gestione.
 
+### Planificacion de visitas (Investigacion de Operaciones)
+
+Desde **Propietario > Visitas**, el propietario organiza las solicitudes de sus
+inmuebles asignados en tres pasos:
+
+1. **Agrega tus horarios disponibles**: registra bloques de una hora con fecha y
+   hora exactas, hasta con 90 dias de anticipacion. Hay botones rapidos para
+   horarios comunes (por ejemplo, "Manana 9:00") y cada horario agregado se
+   muestra como una etiqueta con una "x" para eliminarlo.
+2. **Revisa las solicitudes**: se muestran las solicitudes pendientes de sus
+   propiedades, con el nombre del cliente, el inmueble, la fecha solicitada y
+   el estado (Pendiente, Confirmada, Rechazada o Realizada).
+3. **Calcular propuesta**: el sistema resuelve un modelo de asignacion
+   matematica que prioriza atender la mayor cantidad posible de solicitudes y,
+   entre esas, minimizar el tiempo de espera desde que el cliente solicito
+   hasta la visita programada. El propietario revisa la propuesta y la confirma
+   para programar las visitas y reservar los horarios.
+
+El modelo usa variables `xᵢⱼ` (1 si la solicitud i se asigna al horario j, 0 en
+otro caso), maximiza la cantidad de solicitudes atendidas y minimiza la espera
+acumulada, sujeto a que cada solicitud reciba como máximo un horario y cada
+horario se use como máximo una vez. Los detalles matematicos estan en un
+acordeon "¿Cómo se calcula?" cerrado por defecto.
+
+La API correspondiente es:
+
+- `GET /api/propietario/visitas/disponibilidad`: lista los horarios disponibles del propietario.
+- `POST /api/propietario/visitas/disponibilidad`: registra un bloque de una hora.
+- `DELETE /api/propietario/visitas/disponibilidad/{id}`: elimina un horario no reservado.
+- `POST /api/propietario/visitas/planificar`: calcula la propuesta de asignacion sin guardar cambios.
+- `POST /api/propietario/visitas/planificar/confirmar`: valida la propuesta, programa las solicitudes y reserva los horarios en MongoDB.
+
 ### Recorrido para probarlo
 
 1. Inicia MongoDB y la aplicacion.
