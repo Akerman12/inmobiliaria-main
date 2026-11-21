@@ -8,5 +8,6 @@ import com.example.inmobiliaria.model.Visita;
 
 public interface VisitaRepository extends MongoRepository<Visita, String> {
     List<Visita> findByPropietarioIdOrderByFechaHoraAsc(String propietarioId);
+    List<Visita> findByPropiedadIdInOrderByFechaHoraAsc(List<String> propiedadIds);
     List<Visita> findByClienteIdOrderByFechaHoraAsc(String clienteId);
 }

@@ -8,5 +8,6 @@ import com.example.inmobiliaria.model.Propiedad;
 
 public interface PropiedadRepository extends MongoRepository<Propiedad, String> {
     List<Propiedad> findByPropietarioId(String propietarioId);
+    List<Propiedad> findByVisibleTrue();
 }
 

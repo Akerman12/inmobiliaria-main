@@ -18,6 +18,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.http.HttpStatus;
 
 @Configuration
@@ -80,6 +81,8 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.POST, "/api/v2/chat", "/api/v2/chat/rapido").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v2/chat/salud").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/chatbot").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/chatbot/estado").permitAll()
 
                     .requestMatchers(HttpMethod.GET, "/api/propiedades/visibles", "/api/propiedades/*").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/imagenes/**").permitAll()
@@ -109,7 +112,10 @@ public class SecurityConfig {
 
             .exceptionHandling(ex -> ex.defaultAuthenticationEntryPointFor(
                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                new AntPathRequestMatcher("/api/cuenta/**")
+                new OrRequestMatcher(
+                    new AntPathRequestMatcher("/api/cuenta/**"),
+                    new AntPathRequestMatcher("/api/chatbot/**")
+                )
             ))
 
             .formLogin(form -> form
