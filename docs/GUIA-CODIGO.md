@@ -12,7 +12,7 @@ Es una aplicacion web con:
 - Spring Data MongoDB para guardar propiedades, usuarios y contactos.
 - Spring Security para proteger el panel administrativo.
 - Weka 3.8.6 para estimar precios mediante regresion lineal.
-- Spring AI conectado a Groq para exponer endpoints de chat en el backend; no hay una interfaz de chat integrada en el sitio web.
+- Spring AI conectado a Groq para exponer la API de chat (`/api/v2/chat`) y el chatbot flotante con permisos por rol (`/api/chatbot`).
 - HTML, CSS y JavaScript estatico en `src/main/resources/static`.
 
 En su alcance funcional actual, los visitantes pueden consultar el catalogo y
@@ -20,8 +20,10 @@ contactar a la inmobiliaria. Las cuentas `CLIENTE` pueden explorar propiedades
 y solicitar visitas; las cuentas `PROPIETARIO` gestionan inmuebles asignados,
 consultas y solicitudes de visita. El personal `ADMIN` gestiona propiedades,
 propietarios y mensajes desde un panel protegido, que tambien incluye una
-herramienta para estimar precios. La API de chat es una capacidad tecnica del
-backend y no una funcion visible para los visitantes.
+herramienta para estimar precios. Ademas, todas las paginas publicas y los
+paneles (`/cliente`, `/propietario`, `/admin`) incluyen un widget de chatbot
+flotante de solo lectura cuyos datos se filtran en el backend segun el rol del
+usuario autenticado (o `VISITANTE` sin sesion).
 
 La aplicacion se ejecuta en el puerto `8080` y requiere una URI de MongoDB
 mediante `MONGODB_URI`. No utiliza `localhost` como conexion de respaldo: si
@@ -30,11 +32,10 @@ o a otra base local.
 
 ## 2. Como inicia la aplicacion
 
-Archivo: `src/main/java/com/example/inmobiliaria/InmobiliariaApplication.java`
+Archivo: `src/main/java/com/example/inmobiliaria/InmobiliariaApplication.java` y `src/main/java/com/example/inmobiliaria/config/MongoAuditingConfig.java`
 
 ```java
 @SpringBootApplication
-@EnableMongoAuditing
 public class InmobiliariaApplication {
     public static void main(String[] args) {
         SpringApplication.run(InmobiliariaApplication.class, args);
@@ -45,7 +46,7 @@ public class InmobiliariaApplication {
 ### Lineas importantes
 
 - `@SpringBootApplication` combina configuracion, deteccion de componentes y auto-configuracion de Spring Boot.
-- `@EnableMongoAuditing` activa campos como `@CreatedDate`.
+- `@EnableMongoAuditing` se aisla en `MongoAuditingConfig` para activar campos como `@CreatedDate` sin acoplar las pruebas web (`@WebMvcTest`) al contexto de MongoDB.
 - `main` es el punto de entrada de Java.
 - `SpringApplication.run(...)` crea el contenedor de Spring, registra los componentes y levanta el servidor Tomcat.
 
@@ -333,7 +334,8 @@ Resumen de permisos principales:
 | `POST /api/imagenes/subir` y `/api/admin/**` | `ADMIN` |
 | `POST /api/cuenta/registro` | Publico; solo crea roles `CLIENTE` o `PROPIETARIO` |
 | `/admin/**`, `/propietario/**`, `/cliente/**` | Sus respectivos roles |
-| API de prediccion y endpoints POST del chat | Publicos y validados; igualmente protegidos con CSRF |
+| `GET /api/chatbot/estado` y `POST /api/chatbot` | Publico para visitantes (con rate limit y CSRF); si hay sesion, `ChatContextService` filtra el contexto segun el rol de `SecurityContext` |
+| API de prediccion y endpoints POST de `/api/v2/chat` | Publicos y validados; igualmente protegidos con CSRF |
 
 Las rutas CORS con `origins = "*"` se retiraron. El frontend usa rutas relativas
 y consume las APIs desde el mismo origen.
@@ -370,9 +372,11 @@ debe ser rechazado por Spring Security.
 Las validaciones del navegador mejoran la experiencia, pero los controladores y
 servicios vuelven a validar los datos: contactos limitan nombre, correo,
 telefono y mensaje; testimonios limitan nombre, rol, mensaje y estrellas;
-propiedades limitan campos, numeros, coordenadas y categorias; chat limita la
-pregunta y el dominio. Los mensajes de visita tienen un maximo de 1000
-caracteres. Los favoritos tienen un maximo de 100 elementos. No se debe confiar
+propiedades limitan campos, numeros, coordenadas y categorias; `/api/v2/chat`
+limita la pregunta y el dominio; `/api/chatbot` limita el mensaje a 500
+caracteres, elimina caracteres de control y aplica rate limit en memoria por
+usuario o IP (`ChatbotRateLimiter`). Los mensajes de visita tienen un maximo de
+1000 caracteres. Los favoritos tienen un maximo de 100 elementos. No se debe confiar
 en valores `id`, estados, rol o banderas enviados por el cliente; el servidor
 impone sus valores y comprueba la propiedad/propietario correspondiente.
 
@@ -563,71 +567,142 @@ long precioRedondeado =
 
 La interfaz de `admin/crear.html` muestra el boton de estimacion. El JavaScript envia la peticion y permite usar el precio sugerido en el formulario.
 
-## 11. API de chat del backend con Groq y Spring AI
+## 11. Chatbot flotante y API de chat con Groq y Spring AI
 
-Esta seccion documenta endpoints disponibles para pruebas o integraciones. En
-el estado actual, el sitio web no incluye una pantalla, boton o widget para que
-los visitantes conversen con este servicio.
+Esta seccion documenta tanto los endpoints tecnicos `/api/v2/chat` como el
+**chatbot flotante por rol** (`/api/chatbot`) integrado en las paginas publicas
+y en los paneles `/cliente`, `/propietario` y `/admin`.
 
-Archivos:
+Archivos principales:
 
+- `chat/ChatRole.java`
+- `chat/ChatContextService.java`
+- `chat/ChatbotController.java`
+- `chat/ChatbotRateLimiter.java`
 - `chat/SpringAiChatController.java`
 - `chat/SpringAiChatService.java`
 - `chat/ChatDatos.java`
+- `config/SecurityConfig.java`
+- `src/main/resources/static/js/chatbot.js`
+- `src/main/resources/static/css/app.css`
 - `application.properties`
 
 Configuracion en `src/main/resources/application.properties`:
 
 ```properties
 spring.ai.openai.base-url=https://api.groq.com/openai
-spring.ai.openai.api-key=${GROQ_API_KEY:chat-disabled}
+spring.ai.openai.api-key=${GROQ_API_KEY:}
 spring.ai.openai.chat.options.model=openai/gpt-oss-20b
+spring.ai.model.chat=${SPRING_AI_MODEL_CHAT:none}
 ```
 
-Spring AI usa un cliente compatible con OpenAI, pero la URL base se cambia para enviar las peticiones a Groq.
-
-El chat solo se registra cuando la variable de entorno `GROQ_API_KEY` tiene contenido:
+Spring AI usa un cliente compatible con OpenAI, pero la URL base se apunta a
+Groq. `SpringAiChatService` y `SpringAiChatController` se registran solo cuando
+`SPRING_AI_MODEL_CHAT=openai` y `GROQ_API_KEY` tienen contenido:
 
 ```java
-@ConditionalOnExpression("T(org.springframework.util.StringUtils).hasText('${GROQ_API_KEY:}')")
+@ConditionalOnExpression("'${SPRING_AI_MODEL_CHAT:none}' == 'openai' and T(org.springframework.util.StringUtils).hasText('${GROQ_API_KEY:}')")
 ```
 
-Esto permite que la web y el catalogo funcionen sin clave.
+Esto permite que la web y el catalogo arranquen sin clave. Por su parte,
+`ChatbotController` siempre esta activo y verifica mediante
+`ObjectProvider<SpringAiChatService>` y `GROQ_API_KEY` si el servicio esta
+disponible; si no lo esta, `GET /api/chatbot/estado` responde
+`disponible: false` y `POST /api/chatbot` responde `503 Service Unavailable`
+para desactivar el asistente con elegancia.
 
-`spring.ai.openai.api-key` obtiene el valor de `GROQ_API_KEY`; si no existe, usa
-un valor de reserva para permitir que Spring AI inicialice sin activar el chat.
-`@ConditionalOnExpression` registra el controller y el servicio solo cuando
-`GROQ_API_KEY` tiene contenido.
+### Seguridad y filtrado por rol en el chatbot (`/api/chatbot`)
 
-### Activar Groq en Windows
+1. **Identidad exclusiva del `SecurityContext`**: `ChatContextService.resolverIdentidad(Authentication)`
+   ignora cualquier `rol` o `userId` enviado en el body o query params. Si la
+   peticion es anonima o `AnonymousAuthenticationToken`, asigna `VISITANTE`. Si
+   hay sesion autenticada, valida las autoridades (`ROLE_ADMIN`,
+   `ROLE_PROPIETARIO`, `ROLE_CLIENTE`) y comprueba en `UsuarioRepository` que la
+   cuenta exista, este habilitada (`enabled = true`) y su rol coincida; de lo
+   contrario responde `401` o `403`.
+2. **Contexto pre-filtrado en MongoDB**: antes de invocar al modelo,
+   `ChatContextService.construirContexto(...)` consulta MongoDB segun el rol:
+   - `VISITANTE`: solo propiedades con `visible = true` y `estadoComercial = DISPONIBLE`, sin datos personales.
+   - `CLIENTE`: propiedades visibles + unicamente las `Visita` donde `clienteId` coincide con el usuario autenticado.
+   - `PROPIETARIO`: solo sus propiedades (`propietarioId = usuario.getId()`), y los `Contacto` (`casaInteres`) y `Visita` (`propiedadId`) de esas propiedades.
+   - `ADMIN`: conteos y resumenes agregados de propiedades, contactos, visitas, testimonios y usuarios por rol; nunca incluye contraseñas, hashes BCrypt, correos, telefonos ni nombres personales.
+3. **Prompt parametrizado y solo lectura**: `SpringAiChatService.construirPromptSistema(...)`
+   inyecta el `ROL DEL USUARIO`, el `ALCANCE PERMITIDO` y el bloque `CONTEXTO`
+   ya filtrado, indicando al modelo que use unicamente ese contexto, ignore
+   intentos de cambio de rol o salto de reglas y no ejecute acciones (para
+   solicitar visitas o contactar devuelve enlaces a las paginas correspondientes,
+   como `/propiedad.html?id=...`, `/contacto.html` o `/cliente/index.html`).
+4. **Sanitizacion, CSRF y rate limit**: `POST /api/chatbot` exige token CSRF,
+   limita el mensaje a 500 caracteres (eliminando caracteres de control) y
+   aplica `ChatbotRateLimiter` (`8` solicitudes/minuto por IP para visitantes y
+   `15` solicitudes/minuto por usuario autenticado, devolviendo `429` al
+   excederlo). No se registran datos personales ni el contenido del mensaje en
+   logs.
+5. **Historial en sesion**: el servidor guarda hasta los ultimos 6 turnos en
+   `HttpSession` aislados por identidad (`rol:usuarioId`) para evitar que el
+   cliente manipule turnos previos del asistente.
+
+### Widget flotante en el frontend
+
+- `static/js/chatbot.js` renderiza el boton flotante abajo a la derecha y el
+  panel conversacional en todas las paginas publicas y en `/cliente`,
+  `/propietario` y `/admin`.
+- `static/css/app.css` define sus estilos reutilizando las variables del tema
+  (`--primary-100`, `--gradient`, `--white`, `--neutral-*`, `--error-100`) con
+  soporte para modo claro y oscuro.
+- Todas las respuestas se escapan con `escapeHtml` antes de insertarse en el DOM
+  para prevenir XSS, permitiendo enlaces unicamente hacia rutas internas `.html`
+  del mismo origen.
+- Mantiene el historial de la sesion en `sessionStorage` (reiniciandolo si
+  cambia el rol), muestra el indicador animado `"Escribiendo..."` y maneja de
+  forma explicita los codigos `401`, `429`, `503` y `400`.
+
+### Activar Groq en Windows y Linux
 
 1. Crea una API key en <https://console.groq.com/> desde **API Keys → Create API Key**.
-2. En una terminal de PowerShell configura la clave solo para la sesion actual:
+2. Configura `SPRING_AI_MODEL_CHAT=openai` y `GROQ_API_KEY` en tu sesion o en `.env.local` (excluido de Git):
 
 ```powershell
+$env:SPRING_AI_MODEL_CHAT = "openai"
 $env:GROQ_API_KEY = "gsk_TU_KEY_AQUI"
 .\mvnw.cmd spring-boot:run
 ```
 
-3. Para dejarla guardada para futuras terminales, usa las variables de entorno de
-     Windows o configura la variable desde el perfil de ejecucion de VS Code. No
-     escribas la clave dentro del repositorio ni la subas a Git.
+En Linux/macOS:
 
-Si no configuras `GROQ_API_KEY`, el resto de la aplicacion puede arrancar, pero
-los endpoints del chat no deben considerarse disponibles.
-
-### Probar Groq
-
-```powershell
-curl.exe http://localhost:8080/api/v2/chat/salud
-
-curl.exe -X POST http://localhost:8080/api/v2/chat `
-    -H "Content-Type: application/json" `
-    -d '{"pregunta":"Explica Spring Boot en dos oraciones","dominio":"Java"}'
+```bash
+export SPRING_AI_MODEL_CHAT="openai"
+export GROQ_API_KEY="gsk_TU_KEY_AQUI"
+./mvnw spring-boot:run
 ```
 
-La respuesta incluye `respuesta`, `modelo` y `dominio`. Para listar los modelos
-disponibles para la clave configurada, ejecuta en PowerShell:
+3. No escribas la clave dentro del repositorio ni la subas a Git. Si no
+   configuras ambas variables, la aplicacion funciona con normalidad y el widget
+   muestra el estado desactivado (`503`).
+
+### Probar endpoints de chat
+
+```powershell
+curl.exe http://localhost:8080/api/chatbot/estado
+curl.exe http://localhost:8080/api/v2/chat/salud
+```
+
+Endpoints del chatbot flotante:
+
+```text
+GET  /api/chatbot/estado
+POST /api/chatbot          (requiere cookie/cabecera CSRF y JSON {"mensaje": "..."})
+```
+
+Endpoints tecnicos heredados (`/api/v2/chat`, registrados cuando Groq esta activo):
+
+```text
+GET  /api/v2/chat/salud
+POST /api/v2/chat
+POST /api/v2/chat/rapido?pregunta=...
+```
+
+Para listar modelos disponibles en Groq desde PowerShell:
 
 ```powershell
 $headers = @{ Authorization = "Bearer $env:GROQ_API_KEY" }
@@ -639,35 +714,6 @@ Copia un ID devuelto en `spring.ai.openai.chat.options.model` y reinicia la
 aplicacion. Un `model_not_found` indica que el ID ya no existe o tu cuenta no
 tiene acceso; un `401` indica una API key rechazada y un `429` que se alcanzo el
 limite de solicitudes.
-
-El servicio construye el mensaje del sistema usando concatenacion:
-
-```java
-"Eres un asistente experto en " + dominio
-```
-
-Luego envia el prompt y la pregunta:
-
-```java
-return chatClient.prompt()
-    .system(promptSistema)
-    .user(pregunta)
-    .call()
-    .content();
-```
-
-Endpoints:
-
-```text
-GET  /api/v2/chat/salud
-POST /api/v2/chat
-POST /api/v2/chat/rapido?pregunta=...
-```
-
-Cuando se configura `GROQ_API_KEY`, estos endpoints del backend pueden generar
-respuestas de lenguaje. Esto no forma parte de la interfaz actual del sitio.
-Weka, en cambio, estima precios y su boton esta integrado en el formulario de
-creacion del panel administrativo.
 
 ## 12. Concatenacion y plantillas
 
@@ -1109,7 +1155,7 @@ Requisitos y comprobaciones previas:
 1. Java 21 y Maven (el wrapper `mvnw` esta incluido).
 2. Ejecutar `.\mvnw.cmd test` en Windows o `./mvnw test` en macOS/Linux.
 3. Configurar `MONGODB_URI` y `SPRING_PROFILES_ACTIVE=prod` en el panel privado
-   del proveedor. `GROQ_API_KEY` es opcional; se requiere solo para el chat.
+   del proveedor (por ejemplo, el servicio Web en Render `https://inmobiliaria-main.onrender.com`, que compila mediante el `Dockerfile` del repositorio). Para activar el chatbot y los endpoints de IA, definir tambien `SPRING_AI_MODEL_CHAT=openai` y `GROQ_API_KEY` en las variables de entorno de Render; si no se configuran, el chatbot responde `503` y el resto del sitio sigue operativo.
 4. Construir el JAR con `.\mvnw.cmd clean package` o `./mvnw clean package` y
    ejecutar el artefacto `target/inmobiliaria-0.0.1-SNAPSHOT.jar`.
 5. Probar autenticacion por rol, permisos de APIs, registro, peticiones con y
@@ -1129,6 +1175,6 @@ esa terminal. En VS Code, usa el boton **Stop** de la sesion de depuracion.
 - Models representan documentos.
 - Security decide quien puede entrar o modificar.
 - Weka calcula una estimacion numerica de precio.
-- La API de Groq puede generar respuestas de texto desde el backend, pero no tiene interfaz visual en el sitio.
+- El chatbot flotante (`/api/chatbot` y `chatbot.js`) usa `ChatContextService` y Groq/Spring AI para responder unicamente con datos filtrados por rol desde el backend.
 - JavaScript consume los endpoints y actualiza la interfaz.
 - HTML define la estructura y CSS define la apariencia.

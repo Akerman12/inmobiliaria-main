@@ -1,6 +1,6 @@
 # Bienes Raíces
 
-Aplicación web de gestión inmobiliaria con Java 21, Spring Boot, Spring Security y MongoDB. Incluye un sitio público, un catálogo de propiedades, un panel administrativo y una API opcional de chat con Groq.
+Aplicación web de gestión inmobiliaria con Java 21, Spring Boot, Spring Security y MongoDB. Incluye un sitio público, un catálogo de propiedades, portales para clientes y propietarios, un panel administrativo y un chatbot flotante con permisos por rol conectado a Groq mediante Spring AI.
 
 ## Requisitos
 
@@ -26,7 +26,7 @@ export GROQ_API_KEY="tu_clave_de_groq" # Opcional: necesaria solo para el chat
 ./mvnw spring-boot:run
 ```
 
-Sin configurar `SPRING_AI_MODEL_CHAT=openai` y `GROQ_API_KEY`, la web y el catálogo siguen disponibles; los endpoints de chat no se registran. En VS Code, selecciona un JDK 21 para el proyecto Java. La aplicación utiliza el puerto `8080`. La conexión MongoDB requiere `MONGODB_URI`; no hay una conexión de respaldo a `localhost`.
+Sin configurar `SPRING_AI_MODEL_CHAT=openai` y `GROQ_API_KEY`, la web y el catálogo siguen disponibles; los endpoints `/api/v2/chat` no se registran y `/api/chatbot` se desactiva con elegancia devolviendo `503`. En VS Code, selecciona un JDK 21 para el proyecto Java. La aplicación utiliza el puerto `8080`. La conexión MongoDB requiere `MONGODB_URI`; no hay una conexión de respaldo a `localhost`.
 
 Para detener la aplicación iniciada desde la terminal, pulsa `Ctrl+C` en esa terminal. Si se ejecuta desde VS Code, usa el botón **Stop** de la sesión de depuración.
 
@@ -209,7 +209,7 @@ Ejemplo para `POST /api/v2/chat`:
 }
 ```
 
-La clave no se guarda en el repositorio. La integración expone endpoints REST; no incluye por sí misma un widget de chat en las páginas.
+La clave no se guarda en el repositorio. Además de `/api/v2/chat`, el sitio incluye un **widget de chatbot flotante** (`static/js/chatbot.js` y estilos en `css/app.css`) en las páginas públicas y en los paneles `/cliente`, `/propietario` y `/admin`, conectado a `GET /api/chatbot/estado` y `POST /api/chatbot` con filtrado estricto por rol en `ChatContextService` (`SecurityContext`), límite de 500 caracteres, rate limit (`ChatbotRateLimiter`), escape HTML contra XSS y desactivación elegante (`503`) si falta `GROQ_API_KEY`. Consulta [docs/GUIA-CODIGO.md](docs/GUIA-CODIGO.md) para el detalle técnico completo.
 
 ## Predicción de precios
 
