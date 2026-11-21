@@ -11,12 +11,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const visitasTotal = document.getElementById('visitasTotal');
   const formDisponibilidad = document.getElementById('formDisponibilidadVisita');
   const fechaDisponibilidad = document.getElementById('fechaDisponibilidad');
+  const horaDisponibilidad = document.getElementById('horaDisponibilidad');
   const listaDisponibilidades = document.getElementById('listaDisponibilidades');
   const mensajeDisponibilidad = document.getElementById('mensajeDisponibilidad');
   const calcularPlanVisitas = document.getElementById('calcularPlanVisitas');
   const confirmarPlanVisitas = document.getElementById('confirmarPlanVisitas');
   const mensajePlanVisitas = document.getElementById('mensajePlanVisitas');
   const resultadoPlanVisitas = document.getElementById('resultadoPlanVisitas');
+  const mathAccordion = document.querySelector('.math-accordion-header');
+  const mathBody = document.getElementById('mathFormula');
   let planVisitasActual = null;
   const buscarPropiedades = document.getElementById('buscarPropiedades');
   const filtroEstadoPropiedades = document.getElementById('filtroEstadoPropiedades');
@@ -79,7 +82,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   formDisponibilidad.addEventListener('submit', agregarDisponibilidad);
   calcularPlanVisitas.addEventListener('click', calcularPropuestaVisitas);
   confirmarPlanVisitas.addEventListener('click', confirmarPropuestaVisitas);
+  mathAccordion.addEventListener('click', () => {
+    const open = mathBody.classList.toggle('open');
+    mathAccordion.setAttribute('aria-expanded', open);
+  });
   establecerMinimoDisponibilidad();
+  actualizarEstadoBotonCalcular();
 
   if (window.location.hash) {
     const hash = window.location.hash.replace('#', '');
@@ -106,13 +114,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     await cargarConsultas(propiedades);
     await cargarVisitas();
     await cargarDisponibilidades();
+    actualizarEstadoBotonCalcular();
   }
 
   function establecerMinimoDisponibilidad() {
     const ahora = new Date();
     ahora.setMinutes(0, 0, 0);
     if (ahora.getTime() <= Date.now()) ahora.setHours(ahora.getHours() + 1);
-    fechaDisponibilidad.min = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}T${String(ahora.getHours()).padStart(2, '0')}:00`;
+    const fechaMin = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+    const horaMin = `${String(ahora.getHours()).padStart(2, '0')}:00`;
+    fechaDisponibilidad.min = fechaMin;
+    horaDisponibilidad.min = horaMin;
+    if (fechaDisponibilidad.value < fechaMin) fechaDisponibilidad.value = fechaMin;
+    if (!horaDisponibilidad.value || horaDisponibilidad.value < horaMin) horaDisponibilidad.value = horaMin;
+    generarQuickSlots();
+  }
+
+  function generarQuickSlots() {
+    const contenedor = document.getElementById('quickSlots');
+    contenedor.replaceChildren();
+    const ahora = new Date();
+    ahora.setMinutes(0, 0, 0);
+    if (ahora.getTime() <= Date.now()) ahora.setHours(ahora.getHours() + 1);
+    const fechaHoy = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+    const fechaMañana = new Date(ahora);
+    fechaMañana.setDate(fechaMañana.getDate() + 1);
+    const fechaMañanaStr = `${fechaMañana.getFullYear()}-${String(fechaMañana.getMonth() + 1).padStart(2, '0')}-${String(fechaMañana.getDate()).padStart(2, '0')}`;
+    const slots = [
+      { fecha: fechaHoy, hora: '09:00', label: 'Hoy 9:00' },
+      { fecha: fechaHoy, hora: '10:00', label: 'Hoy 10:00' },
+      { fecha: fechaMañanaStr, hora: '09:00', label: 'Mañana 9:00' },
+      { fecha: fechaMañanaStr, hora: '10:00', label: 'Mañana 10:00' }
+    ];
+    slots.forEach(slot => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'quick-slot';
+      btn.textContent = slot.label;
+      btn.addEventListener('click', () => {
+        fechaDisponibilidad.value = slot.fecha;
+        horaDisponibilidad.value = slot.hora;
+      });
+      contenedor.appendChild(btn);
+    });
   }
 
   async function agregarDisponibilidad(event) {
@@ -121,10 +165,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     boton.disabled = true;
     mostrarMensajeDisponibilidad('', false);
     try {
+      const fechaHora = `${fechaDisponibilidad.value}T${horaDisponibilidad.value}:00`;
       const respuesta = await fetch('/api/propietario/visitas/disponibilidad', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fechaHora: `${fechaDisponibilidad.value}:00` })
+        body: JSON.stringify({ fechaHora })
       });
       if (!respuesta.ok) throw new Error(await mensajeErrorRespuesta(respuesta, 'No se pudo registrar el horario.'));
       formDisponibilidad.reset();
@@ -146,26 +191,46 @@ document.addEventListener('DOMContentLoaded', async () => {
       listaDisponibilidades.replaceChildren();
       if (horarios.length === 0) {
         listaDisponibilidades.innerHTML = '<div class="owner-empty">Aún no registras horarios disponibles.</div>';
+        actualizarEstadoBotonCalcular();
         return;
       }
 
       horarios.forEach(horario => {
-        const fila = document.createElement('div');
-        fila.className = 'availability-slot';
-        const fecha = document.createElement('span');
-        fecha.textContent = `${formatearFecha(horario.fechaHora)}${horario.reservada ? ' · Reservado' : ''}`;
-        const boton = document.createElement('button');
-        boton.type = 'button';
-        boton.textContent = 'Eliminar';
-        boton.disabled = horario.reservada;
-        boton.addEventListener('click', () => eliminarDisponibilidad(horario.id, boton));
-        fila.append(fecha, boton);
-        listaDisponibilidades.appendChild(fila);
+        const tag = document.createElement('div');
+        tag.className = 'availability-tag';
+        tag.textContent = formatearFecha(horario.fechaHora);
+        if (!horario.reservada) {
+          const boton = document.createElement('button');
+          boton.textContent = '×';
+          boton.addEventListener('click', () => eliminarDisponibilidad(horario.id));
+          tag.appendChild(boton);
+        }
+        listaDisponibilidades.appendChild(tag);
       });
+      actualizarEstadoBotonCalcular();
     } catch (error) {
       console.error('Error cargando disponibilidad:', error);
       listaDisponibilidades.innerHTML = '<div class="owner-empty">No se pudieron cargar los horarios. Recarga la página para intentarlo de nuevo.</div>';
     }
+  }
+
+  async function eliminarDisponibilidad(id) {
+    try {
+      const respuesta = await fetch(`/api/propietario/visitas/disponibilidad/${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+      if (!respuesta.ok) throw new Error(await mensajeErrorRespuesta(respuesta, 'No se pudo eliminar el horario.'));
+      await cargarDisponibilidades();
+    } catch (error) {
+      mostrarMensajeDisponibilidad(error.message, true);
+    }
+  }
+
+  function actualizarEstadoBotonCalcular() {
+    const tieneSolicitudes = visitasTotal && !visitasTotal.textContent.includes('0');
+    const tieneHorarios = listaDisponibilidades.children.length > 0 &&
+      !listaDisponibilidades.querySelector('.owner-empty');
+    calcularPlanVisitas.disabled = !(tieneSolicitudes && tieneHorarios);
   }
 
   async function eliminarDisponibilidad(id, boton) {
@@ -253,6 +318,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       resultadoPlanVisitas.hidden = true;
       mostrarMensajePlanVisitas(`${planConfirmado.solicitudesAsignadas} visitas quedaron programadas y confirmadas.`, false);
       await Promise.all([cargarVisitas(), cargarDisponibilidades()]);
+      actualizarEstadoBotonCalcular();
     } catch (error) {
       mostrarMensajePlanVisitas(error.message, true);
       confirmarPlanVisitas.disabled = false;
@@ -388,66 +454,65 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       visitas.forEach((visita) => {
-        const articulo = document.createElement('article');
-        articulo.className = 'consultation-item';
+        const tarjeta = document.createElement('article');
+        tarjeta.className = 'visit-request-card';
         const encabezado = document.createElement('div');
-        encabezado.className = 'consultation-heading';
-        const datos = document.createElement('div');
+        encabezado.className = 'visit-request-header';
+        const info = document.createElement('div');
+        info.className = 'visit-request-info';
         const titulo = document.createElement('h3');
-        titulo.className = 'consultation-name';
-        titulo.textContent = visita.propiedadTitulo || 'Propiedad';
-        const cliente = document.createElement('p');
-        cliente.className = 'consultation-property';
-        cliente.textContent = visita.clienteNombre || 'Cliente';
+        titulo.className = 'visit-request-title';
+        titulo.textContent = visita.clienteNombre || 'Cliente';
+        const propiedad = document.createElement('p');
+        propiedad.className = 'visit-request-client';
+        propiedad.textContent = visita.propiedadTitulo || 'Propiedad';
         const fecha = document.createElement('p');
-        fecha.className = 'consultation-date';
+        fecha.className = 'visit-request-date';
         fecha.textContent = `Solicitada: ${new Intl.DateTimeFormat('es-CO', {
           dateStyle: 'full',
           timeStyle: 'short'
         }).format(new Date(visita.fechaHora))}`;
-        datos.append(titulo, cliente, fecha);
+        info.append(titulo, propiedad, fecha);
         if (visita.fechaAsignada) {
           const asignada = document.createElement('p');
-          asignada.className = 'consultation-date';
+          asignada.className = 'visit-request-scheduled';
           asignada.textContent = `Programada: ${formatearFecha(visita.fechaAsignada)}`;
-          datos.appendChild(asignada);
+          info.appendChild(asignada);
         }
 
         const estado = document.createElement('span');
         const estadoNormalizado = String(visita.estado || '').toUpperCase();
-        estado.className = 'consultation-status';
-        if (estadoNormalizado === 'CONFIRMADA') estado.classList.add('confirmed');
-        if (estadoNormalizado === 'RECHAZADA') estado.classList.add('rejected');
+        estado.className = `visit-request-status ${estadoNormalizado.toLowerCase()}`;
         estado.textContent = etiquetaEstadoVisita(estadoNormalizado);
-        encabezado.append(datos, estado);
-        articulo.appendChild(encabezado);
+        encabezado.append(info, estado);
+        tarjeta.appendChild(encabezado);
 
-        if (visita.clienteEmail) {
-          const correo = document.createElement('a');
-          correo.className = 'consultation-action';
-          correo.href = `mailto:${visita.clienteEmail}`;
-          correo.innerHTML = '<span class="material-symbols-rounded">mail</span>Contactar cliente';
-          articulo.appendChild(correo);
-        }
         if (visita.mensaje) {
           const mensaje = document.createElement('p');
-          mensaje.className = 'consultation-message';
+          mensaje.className = 'visit-request-message';
           mensaje.textContent = visita.mensaje;
-          articulo.appendChild(mensaje);
+          tarjeta.appendChild(mensaje);
         }
 
         const acciones = document.createElement('div');
-        acciones.className = 'visit-management-actions';
+        acciones.className = 'visit-request-actions';
         if (estadoNormalizado === 'SOLICITADA') {
           acciones.append(
-            crearAccionVisita(visita.id, 'CONFIRMADA', 'check', 'Confirmar', 'confirm-visit'),
+            crearAccionVisita(visita.id, 'CONFIRMADA', 'check', 'Aceptar', 'confirm-visit'),
             crearAccionVisita(visita.id, 'RECHAZADA', 'close', 'Rechazar', 'reject-visit')
           );
         } else if (estadoNormalizado === 'CONFIRMADA') {
+          if (visita.clienteEmail) {
+            const correo = document.createElement('a');
+            correo.className = 'visit-request-action contact-visit';
+            correo.href = `mailto:${visita.clienteEmail}`;
+            correo.innerHTML = '<span class="material-symbols-rounded">mail</span>Contactar';
+            acciones.appendChild(correo);
+          }
           acciones.append(crearAccionVisita(visita.id, 'COMPLETADA', 'task_alt', 'Marcar realizada', 'confirm-visit'));
         }
-        if (acciones.childElementCount > 0) articulo.appendChild(acciones);
-        listaVisitas.appendChild(articulo);
+        if (acciones.childElementCount > 0) tarjeta.appendChild(acciones);
+        listaVisitas.appendChild(tarjeta);
       });
     } catch (error) {
       console.error('Error cargando visitas:', error);

@@ -410,14 +410,368 @@
     .visit-management-actions button:hover { background:#f7fafc; }
     .visit-management-actions .confirm-visit { border-color:#b8e0cd; color:#137254; }
     .visit-management-actions .reject-visit { border-color:#edc5c5; color:#a33b3b; }
-    .visit-scheduling-section { margin-bottom:18px; }
-    .visit-scheduling-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; }
-    .visit-scheduling-form { display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px; }
-    .visit-scheduling-form label { display:grid; gap:6px; flex:1 1 220px; color:var(--neutral-50); font-size:1.2rem; font-weight:600; }
-    .visit-scheduling-form input { min-height:40px; padding:8px 10px; border:1px solid var(--neutral-90); border-radius:6px; background:white; color:#26384a; }
-    .availability-slots { display:grid; gap:8px; }
-    .availability-slot { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 12px; border:1px solid var(--neutral-95); border-radius:7px; color:#26384a; font-size:1.2rem; }
-    .availability-slot button { border:0; background:transparent; color:#a33b3b; cursor:pointer; font-weight:600; }
+    /* ===== Visitas panel: three-step professional design ===== */
+    .visits-steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    /* Step 1: availability - dark cards matching Mis propiedades */
+    .visit-step {
+      background: #172433;
+      border: 1px solid var(--neutral-95);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      color: #e8eef3;
+    }
+    .visit-step-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .visit-step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #2878c8;
+      color: white;
+      font-weight: 700;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .visit-step-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0;
+    }
+    .visit-step-desc {
+      color: #b9c6d4;
+      font-size: 1.15rem;
+      margin: 0;
+      line-height: 1.5;
+    }
+    .visit-step-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .availability-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 10px;
+      align-items: end;
+      margin-top: 8px;
+    }
+    .availability-inputs input[type="date"],
+    .availability-inputs input[type="time"] {
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid var(--neutral-90);
+      border-radius: 8px;
+      background: #0f172a;
+      color: #e8eef3;
+      font-size: 1.2rem;
+    }
+    .quick-slots {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .quick-slot {
+      padding: 8px 14px;
+      border: 1px solid var(--neutral-90);
+      border-radius: 8px;
+      background: #0f172a;
+      color: #e8eef3;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 160ms ease;
+    }
+    .quick-slot:hover {
+      border-color: #2878c8;
+      background: #1e293b;
+      color: #2878c8;
+    }
+    .availability-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .availability-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid #2878c8;
+      border-radius: 20px;
+      background: #1e3a5f;
+      color: #70d8ba;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .availability-tag button {
+      border: 0;
+      background: transparent;
+      color: #70d8ba;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 1.2rem;
+      line-height: 1;
+      padding: 0 4px;
+    }
+    .availability-tag button:hover {
+      color: #93c5fd;
+    }
+    .schedule-message {
+      margin: 10px 0 0;
+      color: #b9c6d4;
+      font-size: 1.2rem;
+    }
+    .schedule-message.error { color: #f87171; }
+
+    /* Math accordion - dark card matching Mis propiedades */
+    .math-accordion {
+      border: 1px solid var(--neutral-95);
+      border-radius: 10px;
+      background: #0f172a;
+      margin-top: 16px;
+      overflow: hidden;
+    }
+    .math-accordion-header {
+      padding: 12px 16px;
+      background: #1e293b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      color: #e8eef3;
+      font-size: 1.15rem;
+      transition: background 160ms ease;
+    }
+    .math-accordion-header:hover {
+      background: #334155;
+    }
+    .math-accordion-body {
+      padding: 16px;
+      display: none;
+      background: #0f172a;
+    }
+    .math-accordion-body.open {
+      display: block;
+    }
+    .math-accordion-body code {
+      display: block;
+      white-space: normal;
+      font-size: 1.15rem;
+      color: #e8eef3;
+      margin: 4px 0;
+      line-height: 1.6;
+    }
+
+    /* Step 2 & 3: requests - dark cards matching Mis propiedades */
+    .visit-requests-list {
+      display: grid;
+      gap: 12px;
+    }
+    .visit-request-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 18px 20px;
+      border: 1px solid var(--neutral-95);
+      border-radius: 10px;
+      background: #0f172a;
+      color: #e8eef3;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .visit-request-card:hover {
+      border-color: #3d5a75;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+    }
+    .visit-request-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .visit-request-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .visit-request-title {
+      color: #ffffff;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0;
+    }
+    .visit-request-client {
+      color: #b9c6d4;
+      font-size: 1.2rem;
+      margin: 0;
+    }
+    .visit-request-date {
+      color: #b9c6d4;
+      font-size: 1.2rem;
+      margin: 0;
+    }
+    .visit-request-scheduled {
+      color: #70d8ba;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .visit-request-status {
+      flex: 0 0 auto;
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .visit-request-status.pending {
+      color: #b45309;
+      background: #fef3c7;
+    }
+    .visit-request-status.confirmed {
+      color: #15803d;
+      background: #d1fae5;
+    }
+    .visit-request-status.rejected {
+      color: #b91c1c;
+      background: #fee2e2;
+    }
+    .visit-request-status.completed {
+      color: #15803d;
+      background: #d1fae5;
+    }
+    .visit-request-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .visit-request-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 36px;
+      padding: 6px 14px;
+      border: 1px solid var(--neutral-90);
+      border-radius: 6px;
+      background: #1e293b;
+      color: #e8eef3;
+      font-size: 1.15rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 160ms ease;
+    }
+    .visit-request-action:hover {
+      background: #334155;
+      border-color: #475569;
+    }
+    .visit-request-action.confirm-visit {
+      border-color: #4ade80;
+      color: #4ade80;
+    }
+    .visit-request-action.confirm-visit:hover {
+      background: #166534;
+      color: white;
+    }
+    .visit-request-action.reject-visit {
+      border-color: #f87171;
+      color: #f87171;
+    }
+    .visit-request-action.reject-visit:hover {
+      background: #991b1b;
+      color: white;
+    }
+    .visit-request-action.contact-visit {
+      border-color: #60a5fa;
+      color: #60a5fa;
+    }
+    .visit-request-action.contact-visit:hover {
+      background: #1d4ed8;
+      color: white;
+    }
+    .visit-request-action:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .visit-request-empty {
+      padding: 32px 20px;
+      color: #94a3b8;
+      text-align: center;
+      font-size: 1.3rem;
+    }
+    .visit-request-message {
+      color: #94a3b8;
+      line-height: 1.6;
+      margin: 10px 0 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 1.2rem;
+    }
+
+    /* Step 3: result - dark table matching Mis propiedades */
+    .schedule-result[hidden] { display: none; }
+    .schedule-result-summary {
+      margin: 14px 0;
+      color: #4ade80;
+      font-weight: 700;
+      font-size: 1.3rem;
+    }
+    .schedule-result-table {
+      width: 100%;
+      overflow-x: auto;
+      margin-top: 10px;
+    }
+    .schedule-result-table table {
+      min-width: 600px;
+      width: 100%;
+      border-collapse: collapse;
+      background: #0f172a;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .schedule-result-table th,
+    .schedule-result-table td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--neutral-95);
+      font-size: 1.2rem;
+      color: #e8eef3;
+    }
+    .schedule-result-table th {
+      background: #1e293b;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 1.1rem;
+    }
+    .schedule-result-table tr:last-child td {
+      border-bottom: 0;
+    }
+    .schedule-result-table tr:hover td {
+      background: #1e293b;
+    }
+
     .schedule-formula { padding:14px 16px; border-radius:8px; background:#f3f7fa; color:#245e83; line-height:1.7; }
     .schedule-formula code { display:block; white-space:normal; }
     .schedule-message { margin:10px 0 0; color:var(--neutral-50); }
@@ -426,7 +780,10 @@
     .schedule-result-summary { margin:12px 0; color:#137254; font-weight:700; }
     .schedule-result-table { width:100%; overflow-x:auto; }
     .schedule-result-table table { min-width:600px; }
-    @media (max-width: 760px) { .visit-scheduling-grid { grid-template-columns:1fr; } }
+    @media (max-width: 900px) {
+      .visits-steps { grid-template-columns: 1fr; }
+      .availability-inputs { grid-template-columns: 1fr; }
+    }
     .consultation-toolbar {
       display:flex;
       align-items:center;
@@ -876,46 +1233,73 @@
       <section id="panel-visitas" class="owner-panel">
         <div class="owner-panel-header">
           <h2>Visitas</h2>
-          <p>Registra tus horarios disponibles y crea un plan de visitas para los inmuebles que tienes asignados.</p>
+          <p>Organiza tus visitas para atender a más clientes con menos tiempos de espera.</p>
         </div>
-        <div class="visit-scheduling-grid visit-scheduling-section">
-          <section class="owner-surface" aria-labelledby="horariosDisponiblesTitulo">
-            <div class="owner-surface-header">
-              <div>
-                <h2 id="horariosDisponiblesTitulo">Mis horarios disponibles</h2>
-                <p>Cada bloque dura una hora; registra horas exactas hasta con 90 días de anticipación.</p>
-              </div>
+
+        <div class="visits-steps">
+          <!-- Paso 1: Horarios disponibles -->
+          <div class="visit-step">
+            <div class="visit-step-header">
+              <span class="visit-step-number">1</span>
+              <h3 class="visit-step-title">Agrega tus horarios disponibles</h3>
             </div>
-            <div class="owner-surface-body">
-              <form id="formDisponibilidadVisita" class="visit-scheduling-form">
-                <label for="fechaDisponibilidad">Inicio del bloque (hora exacta)
-                  <input id="fechaDisponibilidad" name="fechaHora" type="datetime-local" step="3600" required>
+            <div class="visit-step-content">
+              <p class="visit-step-desc">Cada bloque dura una hora. Registra horas exactas hasta con 90 días de anticipación.</p>
+              <form id="formDisponibilidadVisita" class="availability-inputs" novalidate>
+                <label style="display:flex;flex-direction:column;gap:4px;color:var(--neutral-50);font-weight:600;font-size:1.1rem;">
+                  Fecha
+                  <input id="fechaDisponibilidad" name="fecha" type="date" required>
+                </label>
+                <label style="display:flex;flex-direction:column;gap:4px;color:var(--neutral-50);font-weight:600;font-size:1.1rem;">
+                  Hora
+                  <input id="horaDisponibilidad" name="hora" type="time" step="3600" required>
                 </label>
                 <button type="submit" class="btn btn-primary"><span class="material-symbols-rounded">add</span>Agregar horario</button>
               </form>
+              <div class="quick-slots" id="quickSlots"></div>
               <p id="mensajeDisponibilidad" class="schedule-message" role="status" aria-live="polite" hidden></p>
-              <div id="listaDisponibilidades" class="availability-slots" aria-live="polite" style="margin-top:14px;">
-                <div class="owner-empty">Cargando horarios...</div>
+              <div id="listaDisponibilidades" class="availability-tags" aria-live="polite">
+                <div class="owner-empty">Agrega al menos un horario para que podamos organizar las visitas.</div>
               </div>
             </div>
-          </section>
+          </div>
 
-          <section class="owner-surface" aria-labelledby="modeloVisitasTitulo">
-            <div class="owner-surface-header">
-              <div>
-                <h2 id="modeloVisitasTitulo">Planificación matemática</h2>
-                <p>El sistema asigna primero la mayor cantidad posible de solicitudes y luego reduce la espera.</p>
+          <!-- Paso 2: Revisar solicitudes -->
+          <div class="visit-step">
+            <div class="visit-step-header">
+              <span class="visit-step-number">2</span>
+              <h3 class="visit-step-title">Revisa las solicitudes</h3>
+            </div>
+            <div class="visit-step-content">
+              <p class="visit-step-desc">Las nuevas solicitudes quedan pendientes hasta que respondas.</p>
+              <span id="visitasTotal" class="owner-status available">0 solicitudes</span>
+              <div id="listaVisitas" class="visit-requests-list" aria-live="polite">
+                <div class="owner-empty">Cargando solicitudes...</div>
               </div>
             </div>
-            <div class="owner-surface-body">
-              <div class="schedule-formula" aria-label="Modelo de asignación de visitas">
-                <code>xᵢⱼ = 1 si la solicitud i se asigna al horario j; de lo contrario, 0.</code>
-                <code>Maximizar M × Σᵢⱼ xᵢⱼ − Σᵢⱼ esperaᵢⱼ × xᵢⱼ, con M mayor que la espera acumulada máxima.</code>
-                <code>Σⱼ xᵢⱼ ≤ 1 por solicitud; Σᵢ xᵢⱼ ≤ 1 por horario.</code>
-                <code>xᵢⱼ solo es posible si el horario pertenece al propietario y no precede la fecha solicitada.</code>
+          </div>
+
+          <!-- Paso 3: Calcular propuesta -->
+          <div class="visit-step">
+            <div class="visit-step-header">
+              <span class="visit-step-number">3</span>
+              <h3 class="visit-step-title">Calcular propuesta</h3>
+            </div>
+            <div class="visit-step-content">
+              <p class="visit-step-desc">El sistema asigna primero la mayor cantidad posible de solicitudes y luego reduce la espera.</p>
+              <div class="math-accordion">
+                <div class="math-accordion-header" role="button" tabindex="0" aria-expanded="false" aria-controls="mathFormula">
+                  <span class="material-symbols-rounded" style="font-size:1.4rem;">help_outline</span>¿Cómo se calcula?
+                </div>
+                <div id="mathFormula" class="math-accordion-body">
+                  <code>xᵢⱼ = 1 si la solicitud i se asigna al horario j; de lo contrario, 0.</code>
+                  <code>Maximizar M × Σᵢⱼ xᵢⱼ − Σᵢⱼ esperaᵢⱼ × xᵢⱼ, con M mayor que la espera acumulada máxima.</code>
+                  <code>Σⱼ xᵢⱼ ≤ 1 por solicitud; Σᵢ xᵢⱼ ≤ 1 por horario.</code>
+                  <code>xᵢⱼ solo es posible si el horario pertenece al propietario y no precede la fecha solicitada.</code>
+                </div>
               </div>
               <p id="mensajePlanVisitas" class="schedule-message" role="status" aria-live="polite" hidden></p>
-              <button id="calcularPlanVisitas" type="button" class="btn btn-primary" style="margin-top:12px;">
+              <button id="calcularPlanVisitas" type="button" class="btn btn-primary" disabled>
                 <span class="material-symbols-rounded">functions</span>Calcular propuesta
               </button>
               <div id="resultadoPlanVisitas" class="schedule-result" hidden>
@@ -931,18 +1315,6 @@
                 </button>
               </div>
             </div>
-          </section>
-        </div>
-        <div class="owner-surface">
-          <div class="owner-surface-header">
-            <div>
-              <h2>Solicitudes de visita</h2>
-              <p>Las nuevas solicitudes quedan pendientes hasta que respondas</p>
-            </div>
-            <span id="visitasTotal" class="owner-status available">0 solicitudes</span>
-          </div>
-          <div id="listaVisitas" class="consultation-list" aria-live="polite">
-            <div class="owner-empty">Cargando solicitudes...</div>
           </div>
         </div>
       </section>
